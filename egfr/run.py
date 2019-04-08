@@ -6,7 +6,7 @@ from nets import CnnNet, DenseNet, CombinedNet
 from torch.utils.data import dataloader
 from dataset import EGFRDataset, train_validation_split
 import torch.optim as optim
-from metrics import auc
+from metrics import auc, auc_threshold
 import collections
 
 
@@ -150,7 +150,7 @@ def main():
                    'adam',
                    500,
                    128,
-                   {'auc': auc},
+                   {'auc': auc, 'auc_threshold': auc_threshold},
                    'TEST')
 
 
