@@ -46,6 +46,7 @@ def train_validate(train_dataset,
                    val_dataset,
                    train_device,
                    val_device,
+                   opt_type,
                    n_epoch,
                    batch_size,
                    metrics,
@@ -67,9 +68,14 @@ def train_validate(train_dataset,
     dense_net = DenseNet(input_dim=train_dataset.get_dim('mord')).to(train_device)
     combined_net = CombinedNet().to(train_device)
 
-    opt = optim.SGD(list(cnn_net.parameters()) + list(dense_net.parameters()) + list(combined_net.parameters()),
-                    lr=1e-5,
-                    momentum=0.99)
+    if opt_type == 'sgd':
+        opt = optim.SGD(list(cnn_net.parameters()) + list(dense_net.parameters()) + list(combined_net.parameters()),
+                        lr=1e-5,
+                        momentum=0.99)
+    elif opt_type == 'adam':
+        opt = optim.Adam(list(cnn_net.parameters()) + list(dense_net.parameters()) + list(combined_net.parameters()),
+                         lr=1e-5)
+
     for e in range(n_epoch):
         train_losses = []
         val_losses = []
@@ -128,7 +134,7 @@ def train_validate(train_dataset,
             tensorboard_logger.log_value('train_{}'.format(key),
                                          train_metric, e + 1)
             tensorboard_logger.log_value('val_{}'.format(key),
-                                         train_metric, e + 1)
+                                         val_metric, e + 1)
 
 
 def main():
@@ -141,6 +147,7 @@ def main():
                    val_dataset,
                    train_device,
                    val_device,
+                   'adam',
                    500,
                    128,
                    {'auc': auc},
