@@ -63,9 +63,9 @@ def train_validate(train_dataset,
     tensorboard_logger.configure('logs/' + hash_code)
 
     criterion = nn.BCELoss()
-    cnn_net = CnnNet()
-    dense_net = DenseNet(input_dim=train_dataset.get_dim('mord'))
-    combined_net = CombinedNet()
+    cnn_net = CnnNet().to(train_device)
+    dense_net = DenseNet(input_dim=train_dataset.get_dim('mord')).to(train_device)
+    combined_net = CombinedNet().to(train_device)
 
     opt = optim.SGD(list(cnn_net.parameters()) + list(dense_net.parameters()) + list(combined_net.parameters()),
                     lr=1e-5,
