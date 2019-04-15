@@ -85,4 +85,14 @@ class CombinedNet(nn.Module):
         return x
 
 
+class AttentionNet(nn.Module):
+    def __init__(self):
+        super(AttentionNet, self).__init__()
+        self.fc = nn.Linear(21, 1)
+
+    def forward(self, x_mat, x_com):
+        x = torch.matmul(x_mat, x_com)
+        x = F.sigmoid(self.fc(x))
+        return x
+
 
