@@ -1,4 +1,4 @@
-
+import argparse
 import torch
 import torch.nn as nn
 import tensorboard_logger
@@ -83,7 +83,7 @@ def train_validate(train_dataset,
         val_outputs = []
         train_labels = []
         val_labels = []
-        print('TRAINING ==============>')
+        print(e, '--', 'TRAINING ==============>')
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
             mord_ft = mord_ft.float().to(train_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(train_device)
@@ -105,7 +105,7 @@ def train_validate(train_dataset,
             opt.step()
 
         # Validate after each epoch
-        print('VALIDATION ==============>')
+        print(e, '--', 'VALIDATION ==============>')
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
             mord_ft = mord_ft.float().to(val_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(val_device)
@@ -138,20 +138,33 @@ def train_validate(train_dataset,
 
 
 def main():
-    train_data, val_data = train_validation_split('data/egfr_10_full_ft_pd_lines.json')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--dataset', help='Input dataset', dest='dataset', default='data/egfr_10_full_ft_pd_lines.json')
+    parser.add_argument('-e', '--epochs', help='Number of epochs', dest='epochs', default=500)
+    parser.add_argument('-b', '--batchsize', help='Batch size', dest='batchsize', default=128)
+    parser.add_argument('-o', '--opt', help='Optimizer adam or sgd', dest='opt', default='adam')
+    parser.add_argument('-g', '--gpu', help='Use GPU or Not?', action='store_true')
+    parser.add_argument('-c', '--hashcode', help='Hashcode for tf.events', dest='hashcode', default='TEST')
+    args = parser.parse_args()
+
+    train_data, val_data = train_validation_split(args.dataset)
     train_dataset = EGFRDataset(train_data)
     val_dataset = EGFRDataset(val_data)
-    train_device = 'cpu'
-    val_device = 'cpu'
+    if args.gpu:
+        train_device='cuda'
+        val_device='cuda'
+    else:
+        train_device = 'cpu'
+        val_device = 'cpu'
     train_validate(train_dataset,
                    val_dataset,
                    train_device,
                    val_device,
-                   'adam',
-                   500,
-                   128,
+                   args.opt,
+                   int(args.epochs),
+                   int(pargs.batchsize),
                    {'auc': auc, 'f1': f1, 'precision': class1_precision, 'recall': class1_recall},
-                   'TEST')
+                   args.hashcode)
 
 
 if __name__ == '__main__':
