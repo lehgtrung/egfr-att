@@ -33,7 +33,7 @@ class CnnNet(nn.Module):
         x = F.relu(self.conv2(x))
         x = self.dropout(x)
         x = self.batch_norm2(x)
-        x = self.pool(x)
+        # x = self.pool(x) # diffence
 
         x = x.view(-1, 16 * 9 * 36)
         x = F.relu(self.fc1(x))
