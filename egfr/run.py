@@ -174,7 +174,7 @@ def main():
                    args.opt,
                    int(args.epochs),
                    int(args.batchsize),
-                   {'auc': auc_threshold, 'f1': f1, 'precision': class1_precision, 'recall': class1_recall},
+                   {'auc': auc},
                    args.hashcode)
 
 
