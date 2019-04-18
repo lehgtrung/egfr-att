@@ -6,7 +6,7 @@ from nets import CnnNet, DenseNet, CombinedNet, AttentionNet
 from torch.utils.data import dataloader
 from dataset import EGFRDataset, train_validation_split
 import torch.optim as optim
-from metrics import auc, f1, class1_precision, class1_recall
+from metrics import auc, auc_threshold, f1, class1_precision, class1_recall
 import collections
 
 
@@ -97,13 +97,13 @@ def train_validate(train_dataset,
             mord_output = dense_net(mord_ft)
 
             combined_output = combined_net(mord_output, non_mord_output)
-            print('Combined net shape: ', combined_output.shape)
-            print('Mat ft shape: ', mat_ft.shape)
-            mat_ft = attention_net(mat_ft, combined_output)
+            # print('Combined net shape: ', combined_output.shape)
+            # print('Mat ft shape: ', mat_ft.shape)
+            outputs = attention_net(mat_ft, combined_output)
 
-            loss = criterion(mat_ft, label)
+            loss = criterion(outputs, label)
             train_losses.append(float(loss.item()))
-            train_outputs.extend(combined_output)
+            train_outputs.extend(outputs)
             train_labels.extend(label)
 
             # Parameters update
@@ -113,18 +113,23 @@ def train_validate(train_dataset,
         # Validate after each epoch
         print(e, '--', 'VALIDATION ==============>')
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
-            mord_ft = mord_ft.float().to(val_device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(val_device)
-            label = label.float().to(val_device)
+            mord_ft = mord_ft.float().to(train_device)
+            non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(train_device)
+            mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
+            label = label.float().to(train_device)
 
             with torch.no_grad():
-                opt.zero_grad()
-                mord_output = cnn_net(non_mord_ft)
-                non_mord_output = dense_net(mord_ft)
+                non_mord_output = cnn_net(non_mord_ft)
+                mord_output = dense_net(mord_ft)
+
                 combined_output = combined_net(mord_output, non_mord_output)
-                loss = criterion(combined_output, label)
+                # print('Combined net shape: ', combined_output.shape)
+                # print('Mat ft shape: ', mat_ft.shape)
+                outputs = attention_net(mat_ft, combined_output)
+
+                loss = criterion(outputs, label)
                 val_losses.append(float(loss.item()))
-                val_outputs.extend(combined_output)
+                val_outputs.extend(outputs)
                 val_labels.extend(label)
 
         train_outputs = torch.stack(train_outputs)
@@ -169,7 +174,7 @@ def main():
                    args.opt,
                    int(args.epochs),
                    int(args.batchsize),
-                   {'auc': auc, 'f1': f1, 'precision': class1_precision, 'recall': class1_recall},
+                   {'auc': auc_threshold, 'f1': f1, 'precision': class1_precision, 'recall': class1_recall},
                    args.hashcode)
 
 
