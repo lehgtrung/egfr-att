@@ -74,24 +74,23 @@ class CombinedNet(nn.Module):
     def __init__(self):
         super(CombinedNet, self).__init__()
         self.fc1 = nn.Linear(84 + 64, 128)
-        self.fc2 = nn.Linear(128, 32)
-        self.fc3 = nn.Linear(32, 1)
+        self.fc2 = nn.Linear(128, 150)
+        self.fc3 = nn.Linear(150, 1)
 
     def forward(self, x1, x2):
         x = torch.cat([x1, x2], dim=1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = F.sigmoid(self.fc3(x))
         return x
 
 
 class AttentionNet(nn.Module):
     def __init__(self):
         super(AttentionNet, self).__init__()
-        self.fc = nn.Linear(21, 1)
+        self.fc = nn.Linear(150, 1)
 
     def forward(self, x_mat, x_com):
-        x = torch.matmul(x_mat, x_com)
+        x = torch.bmm(x_mat, x_com.permute(1, 0).unsqueeze(2)).squeeze().permute(1, 0)
         x = F.sigmoid(self.fc(x))
         return x
 

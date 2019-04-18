@@ -2,7 +2,7 @@ import argparse
 import torch
 import torch.nn as nn
 import tensorboard_logger
-from nets import CnnNet, DenseNet, CombinedNet
+from nets import CnnNet, DenseNet, CombinedNet, AttentionNet
 from torch.utils.data import dataloader
 from dataset import EGFRDataset, train_validation_split
 import torch.optim as optim
@@ -67,6 +67,7 @@ def train_validate(train_dataset,
     cnn_net = CnnNet().to(train_device)
     dense_net = DenseNet(input_dim=train_dataset.get_dim('mord')).to(train_device)
     combined_net = CombinedNet().to(train_device)
+    attention_net = AttentionNet().to(train_device)
 
     if opt_type == 'sgd':
         opt = optim.SGD(list(cnn_net.parameters()) + list(dense_net.parameters()) + list(combined_net.parameters()),
@@ -87,6 +88,7 @@ def train_validate(train_dataset,
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
             mord_ft = mord_ft.float().to(train_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(train_device)
+            mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
             label = label.float().to(train_device)
 
             # Forward
@@ -95,7 +97,11 @@ def train_validate(train_dataset,
             mord_output = dense_net(mord_ft)
 
             combined_output = combined_net(mord_output, non_mord_output)
-            loss = criterion(combined_output, label)
+            print('Combined net shape: ', combined_output.shape)
+            print('Mat ft shape: ', mat_ft.shape)
+            mat_ft = attention_net(mat_ft, combined_output)
+
+            loss = criterion(mat_ft, label)
             train_losses.append(float(loss.item()))
             train_outputs.extend(combined_output)
             train_labels.extend(label)
@@ -162,7 +168,7 @@ def main():
                    val_device,
                    args.opt,
                    int(args.epochs),
-                   int(pargs.batchsize),
+                   int(args.batchsize),
                    {'auc': auc, 'f1': f1, 'precision': class1_precision, 'recall': class1_recall},
                    args.hashcode)
 
