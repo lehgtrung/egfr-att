@@ -12,6 +12,11 @@ def train_validation_split(data_path):
             data = pd.read_json(data_path, lines=True)
         except ValueError:
             data = pd.read_json(data_path)
+    if data_path.endswith('.zip'):
+        try:
+            data = pd.read_json(data_path, compression='zip', lines=True)
+        except ValueError:
+            data = pd.read_json(data_path, compression='zip')
     return train_test_split(data, test_size=0.2)
 
 
