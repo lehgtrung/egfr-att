@@ -6,7 +6,7 @@ from nets import CnnNet, DenseNet, CombinedNet, AttentionNet
 from torch.utils.data import dataloader
 from dataset import EGFRDataset, train_validation_split
 import torch.optim as optim
-from metrics import auc, auc_threshold, f1, class1_precision, class1_recall
+from metrics import *
 import collections
 
 
@@ -148,6 +148,14 @@ def train_validate(train_dataset,
                                          val_metric, e + 1)
 
 
+    train_metrics = {}
+    val_metrics = {}
+    for key in metrics.keys():
+        train_metrics[key] = metrics[key](train_labels, train_outputs)
+        val_metrics[key] = metrics[key](val_labels, val_outputs)
+
+    return train_metrics, val_metrics
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dataset', help='Input dataset', dest='dataset', default='data/egfr_10_full_ft_pd_lines.json')
@@ -174,7 +182,7 @@ def main():
                    args.opt,
                    int(args.epochs),
                    int(args.batchsize),
-                   {'auc': auc},
+                   {'sensitivity': b_sensitivity, 'specificity': b_specificity, 'accuracy': b_accuracy, 'mcc': b_mcc, 'roc': b_roc},
                    args.hashcode)
 
 
