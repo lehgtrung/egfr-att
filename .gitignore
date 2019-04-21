@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 
 # Log files
-logs/
+egfr/logs
 
 
 # C extensions
