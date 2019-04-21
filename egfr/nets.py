@@ -107,7 +107,7 @@ class UnitedNet(nn.Module):
         self.conv_conv2 = nn.Conv2d(6, 16, kernel_size=3)
 
         # Fully connected
-        self.conv_fc1 = nn.Linear(16 * 9 * 36, 120)
+        self.conv_fc1 = nn.Linear(16 * 18 * 72, 120)
         self.conv_fc2 = nn.Linear(120, 84)
 
         # Batch norms
@@ -133,6 +133,7 @@ class UnitedNet(nn.Module):
         # PARAMS FOR COMBINED NET
         self.comb_fc1 = nn.Linear(84 + 64, 128)
         self.comb_fc2 = nn.Linear(128, 150)
+        self.comb_fc3 = nn.Linear(150, 1)
 
         # PARAMS FOR ATTENTION NET
         if self.use_mat:
@@ -149,9 +150,9 @@ class UnitedNet(nn.Module):
         x_non_mord = F.relu(self.conv_conv2(x_non_mord))
         x_non_mord = self.conv_dropout(x_non_mord)
         x_non_mord = self.conv_batch_norm2(x_non_mord)
-        x_non_mord = self.conv_pool(x_non_mord)
+        # x_non_mord = self.conv_pool(x_non_mord)
 
-        x_non_mord = x_non_mord.view(-1, 16 * 9 * 36)
+        x_non_mord = x_non_mord.view(-1, 16 * 18 * 72)
         x_non_mord = F.relu(self.conv_fc1(x_non_mord))
         x_non_mord = F.relu(self.conv_fc2(x_non_mord))
 

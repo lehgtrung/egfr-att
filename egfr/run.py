@@ -265,7 +265,7 @@ def main():
     parser.add_argument('-o', '--opt', help='Optimizer adam or sgd', dest='opt', default='adam')
     parser.add_argument('-g', '--gpu', help='Use GPU or Not?', action='store_true')
     parser.add_argument('-c', '--hashcode', help='Hashcode for tf.events', dest='hashcode', default='TEST')
-    parser.add_argument('-l', '--lr', help='Learning rate', dest='lr', default=1e-5)
+    parser.add_argument('-l', '--lr', help='Learning rate', dest='lr', default=1e-5, type=float)
     args = parser.parse_args()
 
     train_data, val_data = train_validation_split(args.dataset)
