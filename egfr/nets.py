@@ -100,89 +100,84 @@ class UnitedNet(nn.Module):
         super(UnitedNet, self).__init__()
         self.use_mat = use_mat
 
-        self.conv = dict()
-        self.dense = dict()
-        self.comb = dict()
-        self.att = dict()
-
         # PARAMS FOR CNN NET
         # Convolutionals
-        self.conv['conv1'] = nn.Conv2d(1, 6, kernel_size=3)
-        self.conv['pool'] = nn.MaxPool2d(2, 2)
-        self.conv['conv2'] = nn.Conv2d(6, 16, kernel_size=3)
+        self.conv_conv1 = nn.Conv2d(1, 6, kernel_size=3)
+        self.conv_pool = nn.MaxPool2d(2, 2)
+        self.conv_conv2 = nn.Conv2d(6, 16, kernel_size=3)
 
         # Fully connected
-        self.conv['fc1'] = nn.Linear(16 * 9 * 36, 120)
-        self.conv['fc2'] = nn.Linear(120, 84)
+        self.conv_fc1 = nn.Linear(16 * 9 * 36, 120)
+        self.conv_fc2 = nn.Linear(120, 84)
 
         # Batch norms
-        self.conv['batch_norm1'] = nn.BatchNorm2d(6)
-        self.conv['batch_norm2'] = nn.BatchNorm2d(16)
+        self.conv_batch_norm1 = nn.BatchNorm2d(6)
+        self.conv_batch_norm2 = nn.BatchNorm2d(16)
 
         # Dropouts
-        self.conv['dropout'] = nn.Dropout2d()
+        self.conv_dropout = nn.Dropout2d()
 
         # PARAMS FOR DENSE NET
         # Fully connected
-        self.dense['fc1'] = nn.Linear(dense_dim, 512)
-        self.dense['fc2'] = nn.Linear(512, 128)
-        self.dense['fc3'] = nn.Linear(128, 64)
+        self.dense_fc1 = nn.Linear(dense_dim, 512)
+        self.dense_fc2 = nn.Linear(512, 128)
+        self.dense_fc3 = nn.Linear(128, 64)
 
         # Batch norms
-        self.dense['batch_norm1'] = nn.BatchNorm1d(512)
-        self.dense['batch_norm2'] = nn.BatchNorm1d(128)
+        self.dense_batch_norm1 = nn.BatchNorm1d(512)
+        self.dense_batch_norm2 = nn.BatchNorm1d(128)
 
         # Dropouts
-        self.dense['dropout'] = nn.Dropout()
+        self.dense_dropout = nn.Dropout()
 
         # PARAMS FOR COMBINED NET
-        self.comb['fc1'] = nn.Linear(84 + 64, 128)
-        self.comb['fc2'] = nn.Linear(128, 150)
+        self.comb_fc1 = nn.Linear(84 + 64, 128)
+        self.comb_fc2 = nn.Linear(128, 150)
 
         # PARAMS FOR ATTENTION NET
         if self.use_mat:
-            self.att['fc'] = nn.Linear(21, 1)
+            self.att_fc = nn.Linear(21, 1)
 
     def forward(self, x_non_mord, x_mord, x_mat):
 
         # FORWARD CNN
-        x_non_mord = F.relu(self.conv['conv1'](x_non_mord))
-        x_non_mord = self.conv['dropout'](x_non_mord)
-        x_non_mord = self.conv['batch_norm1'](x_non_mord)
-        x_non_mord = self.conv['pool'](x_non_mord)
+        x_non_mord = F.relu(self.conv_conv1(x_non_mord))
+        x_non_mord = self.conv_dropout(x_non_mord)
+        x_non_mord = self.conv_batch_norm1(x_non_mord)
+        x_non_mord = self.conv_pool(x_non_mord)
 
-        x_non_mord = F.relu(self.conv['conv2'](x_non_mord))
-        x_non_mord = self.conv['dropout'](x_non_mord)
-        x_non_mord = self.conv['batch_norm2'](x_non_mord)
-        x_non_mord = self.conv['pool'](x_non_mord)
+        x_non_mord = F.relu(self.conv_conv2(x_non_mord))
+        x_non_mord = self.conv_dropout(x_non_mord)
+        x_non_mord = self.conv_batch_norm2(x_non_mord)
+        x_non_mord = self.conv_pool(x_non_mord)
 
         x_non_mord = x_non_mord.view(-1, 16 * 9 * 36)
-        x_non_mord = F.relu(self.conv['fc1'](x_non_mord))
-        x_non_mord = F.relu(self.conv['fc2'](x_non_mord))
+        x_non_mord = F.relu(self.conv_fc1(x_non_mord))
+        x_non_mord = F.relu(self.conv_fc2(x_non_mord))
 
         # FORWARD DENSE
-        x_mord = F.relu(self.dense['fc1'](x_mord))
-        x_mord = self.dense['batch_norm1'](x_mord)
-        x_mord = self.dense['dropout'](x_mord)
+        x_mord = F.relu(self.dense_fc1(x_mord))
+        x_mord = self.dense_batch_norm1(x_mord)
+        x_mord = self.dense_dropout(x_mord)
 
-        x_mord = F.relu(self.dense['fc2'](x_mord))
-        x_mord = self.dense['batch_norm2'](x_mord)
-        x_mord = self.dense['dropout'](x_mord)
+        x_mord = F.relu(self.dense_fc2(x_mord))
+        x_mord = self.dense_batch_norm2(x_mord)
+        x_mord = self.dense_dropout(x_mord)
 
-        x_mord = F.relu(self.dense['fc3'](x_mord))
+        x_mord = F.relu(self.dense_fc3(x_mord))
 
         # FORWARD COMBINE
         x_comb = torch.cat([x_non_mord, x_mord], dim=1)
-        x_comb = F.relu(self.comb['fc1'](x_comb))
-        x_comb = F.relu(self.comb['fc2'](x_comb))
+        x_comb = F.relu(self.comb_fc1(x_comb))
+        x_comb = F.relu(self.comb_fc2(x_comb))
 
         # FORWARD ATTENTION
         if self.use_mat:
             x_mat = torch.bmm(x_mat, x_comb.unsqueeze(-1)).squeeze(-1)
-            x_mat = torch.sigmoid(self.fc(x_mat))
+            x_mat = torch.sigmoid(self.att_fc(x_mat))
             return x_mat
         else:
-            x_comb = torch.sigmoid(self.comb['fc3'](x_comb))
+            x_comb = torch.sigmoid(self.comb_fc3(x_comb))
             return x_comb
 
 

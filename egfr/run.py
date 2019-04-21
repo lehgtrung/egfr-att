@@ -277,16 +277,16 @@ def main():
     else:
         train_device = 'cpu'
         val_device = 'cpu'
-    train_validate(train_dataset,
-                   val_dataset,
-                   train_device,
-                   val_device,
-                   args.opt,
-                   int(args.epochs),
-                   int(args.batchsize),
-                   {'sensitivity': sensitivity, 'specificity': specificity, 'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
-                   args.hashcode,
-                   args.lr)
+    train_validate_united(train_dataset,
+                          val_dataset,
+                          train_device,
+                          val_device,
+                          args.opt,
+                          int(args.epochs),
+                          int(args.batchsize),
+                          {'sensitivity': sensitivity, 'specificity': specificity, 'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
+                          args.hashcode,
+                          args.lr)
 
 
 if __name__ == '__main__':
