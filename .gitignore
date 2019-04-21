@@ -4,8 +4,8 @@ __pycache__/
 *$py.class
 
 # Log files
-egfr/logs
-
+logs/
+vis/
 
 # C extensions
 *.so
