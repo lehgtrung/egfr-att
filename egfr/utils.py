@@ -26,6 +26,8 @@ def save_model(model, model_dir_path, hash_code, e):
     :param hash_code: hashcode
     :param e: epoch
     """
+    if not os.path.exists(model_dir_path):
+        os.makedirs(model_dir_path)
     torch.save(model.state_dict(), "{}/model_{}_{}".format(model_dir_path, hash_code, e + 1))
 
 

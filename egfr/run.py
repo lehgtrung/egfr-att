@@ -242,10 +242,13 @@ def train_validate_united(train_dataset,
         val_labels = torch.stack(val_labels)
         tensorboard_logger.log_value('train_loss', sum(train_losses) / len(train_losses), e + 1)
         tensorboard_logger.log_value('val_loss', sum(val_losses) / len(val_losses), e + 1)
-
+        print('{"metric": "train_loss", "value": %f, "epoch": %d}' % (sum(train_losses) / len(train_losses), e + 1))
+        print('{"metric": "val_loss", "value": %f, "epoch": %d}' % (sum(val_losses) / len(val_losses), e + 1))
         for key in metrics.keys():
             train_metric = metrics[key](train_labels, train_outputs)
             val_metric = metrics[key](val_labels, val_outputs)
+            print('{"metric": "%s", "value": %f, "epoch": %d}' % ('train_' + key, train_metric, e + 1))
+            print('{"metric": "%s", "value": %f, "epoch": %d}' % ('val_' + key, val_metric, e + 1))
             tensorboard_logger.log_value('train_{}'.format(key),
                                          train_metric, e + 1)
             tensorboard_logger.log_value('val_{}'.format(key),
