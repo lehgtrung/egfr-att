@@ -23,13 +23,13 @@ def save_model(model, model_dir_path, hash_code, e):
     """
     :param model: training model
     :param model_dir_path: directory path
-    :param hashcode: hashcode
+    :param hash_code: hashcode
     :param e: epoch
     """
     torch.save(model.state_dict(), "{}/model_{}_{}".format(model_dir_path, hash_code, e + 1))
 
 
-def save_checkpoint():
+def load_model():
     pass
 
 
