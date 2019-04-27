@@ -8,6 +8,7 @@ from dataset import EGFRDataset, train_validation_split
 import torch.optim as optim
 from metrics import *
 import collections
+import utils
 
 
 def get_max_length(x):
@@ -201,12 +202,13 @@ def train_validate_united(train_dataset,
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
             mord_ft = mord_ft.float().to(train_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(train_device)
-            mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
+            # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
             label = label.float().to(train_device)
 
             # Forward
             opt.zero_grad()
-            outputs = united_net(non_mord_ft, mord_ft, mat_ft)
+            # outputs = united_net(non_mord_ft, mord_ft, mat_ft)
+            outputs = united_net(non_mord_ft, mord_ft, non_mord_ft)
 
             loss = criterion(outputs, label)
             train_losses.append(float(loss.item()))
@@ -247,6 +249,7 @@ def train_validate_united(train_dataset,
                                          train_metric, e + 1)
             tensorboard_logger.log_value('val_{}'.format(key),
                                          val_metric, e + 1)
+        utils.save_model(united_net, "data/trained_models", hash_code, e)
 
     train_metrics = {}
     val_metrics = {}
@@ -272,8 +275,8 @@ def main():
     train_dataset = EGFRDataset(train_data)
     val_dataset = EGFRDataset(val_data)
     if args.gpu:
-        train_device='cuda'
-        val_device='cuda'
+        train_device = 'cuda'
+        val_device = 'cuda'
     else:
         train_device = 'cpu'
         val_device = 'cpu'
