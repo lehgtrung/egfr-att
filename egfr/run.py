@@ -203,12 +203,12 @@ def train_validate_united(train_dataset,
             mord_ft = mord_ft.float().to(train_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(train_device)
             # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
+            mat_ft = non_mord_ft.view((-1, 42, 150)).float().to(train_device)
             label = label.float().to(train_device)
 
             # Forward
             opt.zero_grad()
-            # outputs = united_net(non_mord_ft, mord_ft, mat_ft)
-            outputs = united_net(non_mord_ft, mord_ft, non_mord_ft)
+            outputs = united_net(non_mord_ft, mord_ft, mat_ft)
 
             loss = criterion(outputs, label)
             train_losses.append(float(loss.item()))

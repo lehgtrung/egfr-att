@@ -137,7 +137,8 @@ class UnitedNet(nn.Module):
 
         # PARAMS FOR ATTENTION NET
         if self.use_mat:
-            self.att_fc = nn.Linear(21, 1)
+            # self.att_fc = nn.Linear(21, 1)
+            self.att_fc = nn.Linear(42, 1)
 
     def forward(self, x_non_mord, x_mord, x_mat):
 
