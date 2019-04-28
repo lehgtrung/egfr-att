@@ -191,6 +191,7 @@ def train_validate_united(train_dataset,
         opt = optim.Adam(united_net.parameters(),
                          lr=lr)
 
+    min_loss_idx = 0
     for e in range(n_epoch):
         train_losses = []
         val_losses = []
@@ -253,7 +254,9 @@ def train_validate_united(train_dataset,
                                          train_metric, e + 1)
             tensorboard_logger.log_value('val_{}'.format(key),
                                          val_metric, e + 1)
-        utils.save_model(united_net, "data/trained_models", hash_code, e)
+        if val_losses[-1] < val_losses[min_loss_idx]:
+            min_loss_idx = e
+            utils.save_model(united_net, "data/trained_models", hash_code)
 
     train_metrics = {}
     val_metrics = {}

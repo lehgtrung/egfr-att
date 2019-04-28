@@ -64,6 +64,9 @@ class EGFRDataset(data.Dataset):
         if ft == 'mord':
             return len(self.mord_ft[0])
 
+    def get_smile_ft(self):
+        return self.non_mord_ft
+
 
 
 

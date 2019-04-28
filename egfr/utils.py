@@ -19,7 +19,7 @@ def read_pickle(path):
         return pickle.load(f)
 
 
-def save_model(model, model_dir_path, hash_code, e):
+def save_model(model, model_dir_path, hash_code):
     """
     :param model: training model
     :param model_dir_path: directory path
@@ -28,7 +28,7 @@ def save_model(model, model_dir_path, hash_code, e):
     """
     if not os.path.exists(model_dir_path):
         os.makedirs(model_dir_path)
-    torch.save(model.state_dict(), "{}/model_{}_{}".format(model_dir_path, hash_code, e + 1))
+    torch.save(model.state_dict(), "{}/model_{}_{}".format(model_dir_path, hash_code, "BEST"))
 
 
 def load_model():
