@@ -3,6 +3,8 @@ import pandas as pd
 import torch.utils.data as data
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold
+import numpy as np
 
 
 def train_validation_split(data_path):
@@ -17,7 +19,26 @@ def train_validation_split(data_path):
             data = pd.read_json(data_path, compression='zip', lines=True)
         except ValueError:
             data = pd.read_json(data_path, compression='zip')
-    return train_test_split(data, test_size=0.2)
+    return train_test_split(data, test_size=0.2, random_state=42)
+
+def train_cross_validation_split(data_path):
+    kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+    data = None
+    if data_path.endswith('.json'):
+        try:
+            data = pd.read_json(data_path, lines=True)
+        except ValueError:
+            data = pd.read_json(data_path)
+    if data_path.endswith('.zip'):
+        try:
+            data = pd.read_json(data_path, compression='zip', lines=True)
+        except ValueError:
+            data = pd.read_json(data_path, compression='zip')
+
+    #data = data.sample(frac=0.1)
+    for train_id, val_id in kfold.split(X=np.empty((len(data['active']),1)), y=data['active']):
+        yield data.iloc[train_id,], data.iloc[val_id,]
 
 
 class EGFRDataset(data.Dataset):

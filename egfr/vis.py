@@ -36,12 +36,12 @@ def sum_log(path):
     return runlog
 
 if __name__ == "__main__":
-    if not os.path.exists('./vis/'):
-        os.makedirs('./vis/')
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', help='Input tf.events', dest='fi', default=get_last_file())
     args = parser.parse_args()
+
+    if not os.path.exists('./vis/' + os.path.basename(args.fi)):
+        os.makedirs('./vis/' + os.path.basename(args.fi))
 
     df = sum_log(args.fi)
     #print(df)
@@ -51,5 +51,5 @@ if __name__ == "__main__":
         plt.plot(df[df['metric'] == ('train_' + m)].value.values, label=('train_' + m))
         plt.plot(df[df['metric'] == ('val_' + m)].value.values, label=('val_' + m))
         plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
-        plt.savefig("./vis/vis_" + os.path.basename(args.fi) + '.' + m + ".png", bbox_inches='tight')
+        plt.savefig("./vis/" + os.path.basename(args.fi) + '/' + m + ".png", bbox_inches='tight')
     print('Done')
