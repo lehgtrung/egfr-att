@@ -114,7 +114,6 @@ def train_validate_united(train_dataset,
         global_val_losses.append(sum(val_losses) / len(val_losses))
         if global_val_losses[-1] < global_val_losses[min_loss_idx]:
             min_loss_idx = e
-            print('MIN LOSS IDX ', min_loss_idx)
             utils.save_model(united_net, "data/trained_models", hash_code)
 
     train_metrics = {}
