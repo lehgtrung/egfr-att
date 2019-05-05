@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import os
 
 
 class CnnNet(nn.Module):
@@ -96,9 +97,14 @@ class AttentionNet(nn.Module):
 
 
 class UnitedNet(nn.Module):
-    def __init__(self, dense_dim, use_mat=True):
+    def __init__(self, dense_dim, use_mat=True, infer=False, dir_path=None):
         super(UnitedNet, self).__init__()
         self.use_mat = use_mat
+        self.infer = infer
+        self.dir_path = dir_path
+        if self.dir_path:
+            self.smile_out_f = open(os.path.join(self.dir_path, 'smiles.txt'), 'w')
+            self.weight_f = open(os.path.join(self.dir_path, 'weight.txt'), 'w')
 
         # PARAMS FOR CNN NET
         # Convolutionals
@@ -140,8 +146,7 @@ class UnitedNet(nn.Module):
             # self.att_fc = nn.Linear(21, 1)
             self.att_fc = nn.Linear(42, 1)
 
-    def forward(self, x_non_mord, x_mord, x_mat):
-
+    def forward(self, x_non_mord, x_mord, x_mat, smiles=None):
         # FORWARD CNN
         x_non_mord = F.relu(self.conv_conv1(x_non_mord))
         x_non_mord = self.conv_dropout(x_non_mord)
@@ -176,10 +181,25 @@ class UnitedNet(nn.Module):
         # FORWARD ATTENTION
         if self.use_mat:
             x_mat = torch.bmm(x_mat, x_comb.unsqueeze(-1)).squeeze(-1)
+            if self.infer:
+                if not smiles:
+                    raise ValueError('Please input smiles')
+                x_mat_txt = x_mat.cpu().detach().numpy().tolist()
+                x_mat_txt = ["\t".join([str(round(elem, 4)) for elem in seq]) for seq in x_mat_txt]
+                for smile, weight in zip(smiles, x_mat_txt):
+                    self.weight_f.write(weight + '\n')
+                    self.smile_out_f.write(smile + '\n')
             x_mat = torch.sigmoid(self.att_fc(x_mat))
             return x_mat
         else:
             x_comb = torch.sigmoid(self.comb_fc3(x_comb))
             return x_comb
+
+    def __del__(self):
+        print('Closing files ...')
+        if hasattr(self, 'weight_f'):
+            self.weight_f.close()
+        if hasattr(self, 'smile_out_f'):
+            self.smile_out_f.close()
 
 

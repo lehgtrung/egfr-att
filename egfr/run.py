@@ -7,40 +7,7 @@ from torch.utils.data import dataloader
 from dataset import EGFRDataset, train_validation_split
 import torch.optim as optim
 from metrics import *
-import collections
 import utils
-
-
-def get_max_length(x):
-    return len(max(x, key=len))
-
-
-def pad_sequence(seq):
-    def _pad(_it, _max_len):
-        return [0] * (_max_len - len(_it)) + _it
-    padded = [_pad(it, get_max_length(seq)) for it in seq]
-    return padded
-
-
-def custom_collate(batch):
-    """
-        Custom collate function for our batch, a batch in dataloader looks like
-            [(0, [24104, 27359], 6684),
-            (0, [24104], 27359),
-            (1, [16742, 31529], 31485),
-            (1, [16742], 31529),
-            (2, [6579, 19316, 13091, 7181, 6579, 19316], 13091)]
-    """
-    transposed = zip(*batch)
-    lst = []
-    for samples in transposed:
-        if isinstance(samples[0], int):
-            lst.append(torch.LongTensor(samples))
-        elif isinstance(samples[0], float):
-            lst.append(torch.DoubleTensor(samples))
-        elif isinstance(samples[0], collections.Sequence):
-            lst.append(torch.LongTensor(pad_sequence(samples)))
-    return lst
 
 
 def train_validate(train_dataset,
@@ -55,12 +22,12 @@ def train_validate(train_dataset,
                    lr):
     train_loader = dataloader.DataLoader(dataset=train_dataset,
                                          batch_size=batch_size,
-                                         collate_fn=custom_collate,
+                                         collate_fn=utils.custom_collate,
                                          shuffle=True)
 
     val_loader = dataloader.DataLoader(dataset=val_dataset,
                                        batch_size=batch_size,
-                                       collate_fn=custom_collate,
+                                       collate_fn=utils.custom_collate,
                                        shuffle=True)
 
     tensorboard_logger.configure('logs/' + hash_code)
@@ -125,8 +92,6 @@ def train_validate(train_dataset,
                 mord_output = dense_net(mord_ft)
 
                 combined_output = combined_net(mord_output, non_mord_output)
-                # print('Combined net shape: ', combined_output.shape)
-                # print('Mat ft shape: ', mat_ft.shape)
                 outputs = attention_net(mat_ft, combined_output)
 
                 loss = criterion(outputs, label)
@@ -170,12 +135,12 @@ def train_validate_united(train_dataset,
                           lr):
     train_loader = dataloader.DataLoader(dataset=train_dataset,
                                          batch_size=batch_size,
-                                         collate_fn=custom_collate,
+                                         collate_fn=utils.custom_collate,
                                          shuffle=True)
 
     val_loader = dataloader.DataLoader(dataset=val_dataset,
                                        batch_size=batch_size,
-                                       collate_fn=custom_collate,
+                                       collate_fn=utils.custom_collate,
                                        shuffle=True)
 
     tensorboard_logger.configure('logs/' + hash_code)

@@ -21,6 +21,7 @@ def train_validation_split(data_path):
             data = pd.read_json(data_path, compression='zip')
     return train_test_split(data, test_size=0.2, random_state=42)
 
+
 def train_cross_validation_split(data_path):
     kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
@@ -42,21 +43,26 @@ def train_cross_validation_split(data_path):
 
 
 class EGFRDataset(data.Dataset):
-    def __init__(self, data):
+    def __init__(self, data, infer=False):
         self.data = data
         self.NON_MORD_NAMES = ['smile_ft', 'id', 'subset', 'quinazoline', 'pyrimidine', 'smiles', 'active']
+        self.infer = infer
 
         # Standardize mord features
         scl = StandardScaler()
         self.mord_ft = scl.fit_transform(self.data.drop(columns=self.NON_MORD_NAMES)).tolist()
         self.non_mord_ft = self.data['smile_ft'].values.tolist()
+        self.smiles = self.data['smiles'].values.tolist()
         self.label = self.data['active'].values.tolist()
 
     def __len__(self):
         return len(self.label)
 
     def __getitem__(self, idx):
-        return self.mord_ft[idx], self.non_mord_ft[idx], self.label[idx]
+        if self.infer:
+            return self.smiles[idx], self.mord_ft[idx], self.non_mord_ft[idx], self.label[idx]
+        else:
+            return self.mord_ft[idx], self.non_mord_ft[idx], self.label[idx]
 
     def get_dim(self, ft):
         if ft == 'non_mord':
