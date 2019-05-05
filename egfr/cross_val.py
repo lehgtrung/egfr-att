@@ -11,38 +11,6 @@ import collections
 import utils
 
 
-def get_max_length(x):
-    return len(max(x, key=len))
-
-
-def pad_sequence(seq):
-    def _pad(_it, _max_len):
-        return [0] * (_max_len - len(_it)) + _it
-    padded = [_pad(it, get_max_length(seq)) for it in seq]
-    return padded
-
-
-def custom_collate(batch):
-    """
-        Custom collate function for our batch, a batch in dataloader looks like
-            [(0, [24104, 27359], 6684),
-            (0, [24104], 27359),
-            (1, [16742, 31529], 31485),
-            (1, [16742], 31529),
-            (2, [6579, 19316, 13091, 7181, 6579, 19316], 13091)]
-    """
-    transposed = zip(*batch)
-    lst = []
-    for samples in transposed:
-        if isinstance(samples[0], int):
-            lst.append(torch.LongTensor(samples))
-        elif isinstance(samples[0], float):
-            lst.append(torch.DoubleTensor(samples))
-        elif isinstance(samples[0], collections.Sequence):
-            lst.append(torch.LongTensor(pad_sequence(samples)))
-    return lst
-
-
 def train_validate_united(train_dataset,
                           val_dataset,
                           train_device,
@@ -55,12 +23,12 @@ def train_validate_united(train_dataset,
                           lr):
     train_loader = dataloader.DataLoader(dataset=train_dataset,
                                          batch_size=batch_size,
-                                         collate_fn=custom_collate,
+                                         collate_fn=utils.custom_collate,
                                          shuffle=True)
 
     val_loader = dataloader.DataLoader(dataset=val_dataset,
                                        batch_size=batch_size,
-                                       collate_fn=custom_collate,
+                                       collate_fn=utils.custom_collate,
                                        shuffle=True)
 
     #tensorboard_logger.configure('logs/' + hash_code)
@@ -77,6 +45,7 @@ def train_validate_united(train_dataset,
                          lr=lr)
 
     for e in range(n_epoch):
+        min_loss_idx = 0
         train_losses = []
         val_losses = []
         train_outputs = []
@@ -118,6 +87,7 @@ def train_validate_united(train_dataset,
 
                 loss = criterion(outputs, label)
                 val_losses.append(float(loss.item()))
+                print(val_losses)
                 val_outputs.extend(outputs)
                 val_labels.extend(label)
 
@@ -126,7 +96,7 @@ def train_validate_united(train_dataset,
         train_labels = torch.stack(train_labels)
         val_labels = torch.stack(val_labels)
 
-        if (((e+1)%10)==0):
+        if (e+1) % 10 == 0:
             tensorboard_logger.log_value('train_loss', sum(train_losses) / len(train_losses), e + 1)
             tensorboard_logger.log_value('val_loss', sum(val_losses) / len(val_losses), e + 1)
             print('{"metric": "train_loss", "value": %f, "epoch": %d}' % (sum(train_losses) / len(train_losses), e + 1))
@@ -140,7 +110,11 @@ def train_validate_united(train_dataset,
                                              train_metric, e + 1)
                 tensorboard_logger.log_value('val_{}'.format(key),
                                              val_metric, e + 1)
-        utils.save_model(united_net, "data/trained_models", hash_code, e)
+
+        if val_losses[-1] < val_losses[min_loss_idx]:
+            min_loss_idx = e
+            print('MIN LOSS IDX ', min_loss_idx)
+            utils.save_model(united_net, "data/trained_models", hash_code)
 
     train_metrics = {}
     val_metrics = {}
@@ -199,15 +173,6 @@ def main():
     print(row_format.format("", *(metrics_dict.keys())))
     print(row_format.format("Train", *train_metrics_cv))
     print(row_format.format("Val", *val_metrics_cv))
-
-
-    # for i, m in enumerate(metrics_dict):
-    #     print('Train_'+m+':', train_metrics_cv[i])
-    #     print('Val_' + m + ':', val_metrics_cv[i])
-
-
-
-
 
 if __name__ == '__main__':
     main()

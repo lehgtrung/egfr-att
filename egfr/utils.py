@@ -2,6 +2,41 @@
 import os
 import pickle
 import torch
+import collections
+
+
+def get_max_length(x):
+    return len(max(x, key=len))
+
+
+def pad_sequence(seq):
+    def _pad(_it, _max_len):
+        return [0] * (_max_len - len(_it)) + _it
+    padded = [_pad(it, get_max_length(seq)) for it in seq]
+    return padded
+
+
+def custom_collate(batch):
+    """
+        Custom collate function for our batch, a batch in dataloader looks like
+            [(0, [24104, 27359], 6684),
+            (0, [24104], 27359),
+            (1, [16742, 31529], 31485),
+            (1, [16742], 31529),
+            (2, [6579, 19316, 13091, 7181, 6579, 19316], 13091)]
+    """
+    transposed = zip(*batch)
+    lst = []
+    for samples in transposed:
+        if isinstance(samples[0], str):
+            lst.append(samples)
+        if isinstance(samples[0], int):
+            lst.append(torch.LongTensor(samples))
+        elif isinstance(samples[0], float):
+            lst.append(torch.DoubleTensor(samples))
+        elif isinstance(samples[0], list):
+            lst.append(torch.LongTensor(pad_sequence(samples)))
+    return lst
 
 
 def create_dir(dir_name):
