@@ -2,12 +2,11 @@ import argparse
 import torch
 import torch.nn as nn
 import tensorboard_logger
-from nets import CnnNet, DenseNet, CombinedNet, AttentionNet, UnitedNet
+from nets import UnitedNet
 from torch.utils.data import dataloader
-from dataset import EGFRDataset, train_validation_split, train_cross_validation_split
+from dataset import EGFRDataset, train_cross_validation_split
 import torch.optim as optim
 from metrics import *
-import collections
 import utils
 
 
@@ -20,7 +19,8 @@ def train_validate_united(train_dataset,
                           batch_size,
                           metrics,
                           hash_code,
-                          lr):
+                          lr,
+                          fold):
     train_loader = dataloader.DataLoader(dataset=train_dataset,
                                          batch_size=batch_size,
                                          collate_fn=utils.custom_collate,
@@ -53,7 +53,7 @@ def train_validate_united(train_dataset,
         val_outputs = []
         train_labels = []
         val_labels = []
-        print(e+1, '--', 'TRAINING ==============>')
+        print('FOLD', fold, '--', 'EPOC', e+1, '--', 'TRAINING...')
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
             mord_ft = mord_ft.float().to(train_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(train_device)
@@ -75,7 +75,7 @@ def train_validate_united(train_dataset,
             opt.step()
 
         # Validate after each epoch
-        print(e+1, '--', 'VALIDATION ==============>')
+        print('FOLD', fold, '--', 'EPOC', e+1, '--', 'VALIDATION...')
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
             mord_ft = mord_ft.float().to(val_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(val_device)
@@ -96,6 +96,16 @@ def train_validate_united(train_dataset,
         train_labels = torch.stack(train_labels)
         val_labels = torch.stack(val_labels)
 
+        global_val_losses.append(sum(val_losses) / len(val_losses))
+        if global_val_losses[-1] < global_val_losses[min_loss_idx]:
+            min_loss_idx = e
+            print('MIN LOSS IDX ', min_loss_idx)
+            filename = hash_code + "_fold_" + str(fold)
+            folder = "data/trained_models/" #+ "fold_" + str(fold) + "/"
+            #if os.path.exists(folder):
+            #    shutil.rmtree(folder)
+            utils.save_model(united_net, folder, filename)
+
         if (e+1) % 10 == 0:
             tensorboard_logger.log_value('train_loss', sum(train_losses) / len(train_losses), e + 1)
             tensorboard_logger.log_value('val_loss', sum(val_losses) / len(val_losses), e + 1)
@@ -110,11 +120,8 @@ def train_validate_united(train_dataset,
                                              train_metric, e + 1)
                 tensorboard_logger.log_value('val_{}'.format(key),
                                              val_metric, e + 1)
+            print('MIN LOSS IDX ', min_loss_idx)
 
-        global_val_losses.append(sum(val_losses) / len(val_losses))
-        if global_val_losses[-1] < global_val_losses[min_loss_idx]:
-            min_loss_idx = e
-            utils.save_model(united_net, "data/trained_models", hash_code)
 
     train_metrics = {}
     val_metrics = {}
@@ -123,6 +130,28 @@ def train_validate_united(train_dataset,
         val_metrics[key] = metrics[key](val_labels, val_outputs)
 
     return train_metrics, val_metrics
+
+def predict(dataset, model_path, device='cpu'):
+    #data = pd.read_json(data_path, lines=True)
+    #dataset = EGFRDataset(data, infer=True)
+    loader = dataloader.DataLoader(dataset=dataset,
+                                   batch_size=128,
+                                   collate_fn=utils.custom_collate,
+                                   shuffle=True)
+    united_net = UnitedNet(dense_dim=dataset.get_dim('mord'), use_mat=True).to(device)
+    united_net.load_state_dict(torch.load(model_path, map_location=device))
+    out = []
+    for i, (mord_ft, non_mord_ft, label) in enumerate(loader):
+        with torch.no_grad():
+            mord_ft = mord_ft.float().to(device)
+            non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(device)
+            mat_ft = non_mord_ft.squeeze(1).float().to(device)
+            # Forward to get smiles and equivalent weights
+            o = united_net(non_mord_ft, mord_ft, mat_ft)
+            out.append(o)
+    print('Forward done !!!')
+    out = np.concatenate(out)
+    return out
 
 
 def main():
@@ -147,9 +176,13 @@ def main():
 
     train_metrics_cv = []
     val_metrics_cv = []
+    best_cv = []
     metrics_dict = {'sensitivity': sensitivity, 'specificity': specificity, 'accuracy': accuracy, 'mcc': mcc, 'auc': auc}
+    metrics_cv_dict = {'sensitivity': sensitivity_cv, 'specificity': specificity_cv, 'accuracy': accuracy_cv, 'mcc': mcc_cv, 'auc': auc_cv}
 
+    fold=0
     for train_data, val_data in train_cross_validation_split(args.dataset):
+        fold += 1
         train_dataset = EGFRDataset(train_data)
         val_dataset = EGFRDataset(val_data)
 
@@ -162,20 +195,38 @@ def main():
                                                            int(args.batchsize),
                                                            metrics_dict,
                                                            args.hashcode,
-                                                           args.lr)
+                                                           args.lr,
+                                                           fold)
         train_metrics_cv.append(train_metrics)
         val_metrics_cv.append(val_metrics)
+        filename = "data/trained_models/model_" + args.hashcode + "_fold_" + str(fold)+"_BEST"
+
+        y_pred = predict(val_dataset, filename)
+        y_true = val_dataset.label
+        #print(pred.shape)
+        bestcv = []
+        for m in metrics_cv_dict.values():
+            bestcv.append(m(y_true, y_pred))
+
+        best_cv.append(bestcv)
+        
+
 
     train_metrics_cv = np.round(np.array([list(d.values()) for d in train_metrics_cv]).mean(axis=0), decimals=4)
     val_metrics_cv = np.round(np.array([list(d.values()) for d in val_metrics_cv]).mean(axis=0), decimals=4)
-    metrics_list = [train_metrics_cv, val_metrics_cv]
+    print(best_cv)
+    best_cv = np.round(np.array([d for d in best_cv]).mean(axis=0), decimals=4)
+    #metrics_list = [train_metrics_cv, val_metrics_cv]
     row_format = "{:>12}" * (len(metrics_dict.keys()) + 1)
     print(row_format.format("", *(metrics_dict.keys())))
     print(row_format.format("Train", *train_metrics_cv))
     print(row_format.format("Val", *val_metrics_cv))
+    print(row_format.format("Best", *best_cv))
 
 if __name__ == '__main__':
     main()
+
+
 
 
 
