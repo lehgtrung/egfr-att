@@ -30,8 +30,7 @@ def train_validate_united(train_dataset,
                                        batch_size=batch_size,
                                        collate_fn=utils.custom_collate,
                                        shuffle=True)
-
-    tensorboard_logger.configure('logs/{}_FOLD_{}'.format(hash_code, fold))
+    # tensorboard_logger.configure('logs/{}_FOLD_{}'.format(hash_code, fold))
 
     criterion = nn.BCELoss()
     united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'), use_mat=True).to(train_device)
@@ -105,7 +104,7 @@ def train_validate_united(train_dataset,
             with open("logs/best_model_fold_{}".format(fold), 'w') as f:
                 f.write(str(e))
             filename = hash_code + "_fold_" + str(fold)
-            folder = "data/trained_models/{}/model_fold_{}".format(hash_code, fold)
+            folder = "data/trained_models/"
             utils.save_model(united_net, folder, filename)
 
         if (e+1) % 10 == 0:
@@ -172,7 +171,7 @@ def main():
         train_device = 'cpu'
         val_device = 'cpu'
 
-    # tensorboard_logger.configure('logs/' + args.hashcode)
+    tensorboard_logger.configure('logs/' + args.hashcode)
 
     train_metrics_cv = []
     val_metrics_cv = []
