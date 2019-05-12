@@ -31,7 +31,7 @@ def train_validate_united(train_dataset,
                                        collate_fn=utils.custom_collate,
                                        shuffle=True)
 
-    #tensorboard_logger.configure('logs/' + hash_code)
+    tensorboard_logger.configure('logs/{}_FOLD_{}'.format(hash_code, fold))
 
     criterion = nn.BCELoss()
     united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'), use_mat=True).to(train_device)
@@ -44,8 +44,10 @@ def train_validate_united(train_dataset,
         opt = optim.Adam(united_net.parameters(),
                          lr=lr)
 
-    global_val_losses = []
+    min_loss = 100  # arbitary large number
     min_loss_idx = 0
+    with open("logs/best_model_fold_{}".format(fold), 'w') as f:
+        f.write(str(0))
     for e in range(n_epoch):
         train_losses = []
         val_losses = []
@@ -57,7 +59,6 @@ def train_validate_united(train_dataset,
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
             mord_ft = mord_ft.float().to(train_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device)
-            # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(train_device)
 
@@ -79,7 +80,6 @@ def train_validate_united(train_dataset,
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
             mord_ft = mord_ft.float().to(val_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(val_device)
-            # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(val_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(val_device)
 
@@ -96,14 +96,16 @@ def train_validate_united(train_dataset,
         train_labels = torch.stack(train_labels)
         val_labels = torch.stack(val_labels)
 
-        global_val_losses.append(sum(val_losses) / len(val_losses))
-        if global_val_losses[-1] < global_val_losses[min_loss_idx]:
+        loss_epoch = sum(val_losses) / len(val_losses)
+        print("LOSS EPOCH: ", loss_epoch)
+        if loss_epoch < min_loss:
             min_loss_idx = e
+            min_loss = loss_epoch
             print('MIN LOSS IDX ', min_loss_idx)
+            with open("logs/best_model_fold_{}".format(fold), 'w') as f:
+                f.write(str(e))
             filename = hash_code + "_fold_" + str(fold)
-            folder = "data/trained_models/" #+ "fold_" + str(fold) + "/"
-            #if os.path.exists(folder):
-            #    shutil.rmtree(folder)
+            folder = "data/trained_models/{}/model_fold_{}".format(hash_code, fold)
             utils.save_model(united_net, folder, filename)
 
         if (e+1) % 10 == 0:
@@ -122,7 +124,6 @@ def train_validate_united(train_dataset,
                                              val_metric, e + 1)
             print('MIN LOSS IDX ', min_loss_idx)
 
-
     train_metrics = {}
     val_metrics = {}
     for key in metrics.keys():
@@ -131,9 +132,8 @@ def train_validate_united(train_dataset,
 
     return train_metrics, val_metrics
 
+
 def predict(dataset, model_path, device='cpu'):
-    #data = pd.read_json(data_path, lines=True)
-    #dataset = EGFRDataset(data, infer=True)
     loader = dataloader.DataLoader(dataset=dataset,
                                    batch_size=128,
                                    collate_fn=utils.custom_collate,
@@ -172,17 +172,22 @@ def main():
         train_device = 'cpu'
         val_device = 'cpu'
 
-    tensorboard_logger.configure('logs/' + args.hashcode)
+    # tensorboard_logger.configure('logs/' + args.hashcode)
 
     train_metrics_cv = []
     val_metrics_cv = []
     best_cv = []
-    metrics_dict = {'sensitivity': sensitivity, 'specificity': specificity, 'accuracy': accuracy, 'mcc': mcc, 'auc': auc}
-    metrics_cv_dict = {'sensitivity': sensitivity_cv, 'specificity': specificity_cv, 'accuracy': accuracy_cv, 'mcc': mcc_cv, 'auc': auc_cv}
+    metrics_dict = {'sensitivity': sensitivity,
+                    'specificity': specificity,
+                    'accuracy': accuracy,
+                    'mcc': mcc, 'auc': auc}
+    metrics_cv_dict = {'sensitivity': sensitivity_cv,
+                       'specificity': specificity_cv,
+                       'accuracy': accuracy_cv,
+                       'mcc': mcc_cv,
+                       'auc': auc_cv}
 
-    fold=0
-    for train_data, val_data in train_cross_validation_split(args.dataset):
-        fold += 1
+    for fold, (train_data, val_data) in enumerate(train_cross_validation_split(args.dataset)):
         train_dataset = EGFRDataset(train_data)
         val_dataset = EGFRDataset(val_data)
 
@@ -196,14 +201,13 @@ def main():
                                                            metrics_dict,
                                                            args.hashcode,
                                                            args.lr,
-                                                           fold)
+                                                           fold + 1)
         train_metrics_cv.append(train_metrics)
         val_metrics_cv.append(val_metrics)
-        filename = "data/trained_models/model_" + args.hashcode + "_fold_" + str(fold)+"_BEST"
+        filename = "data/trained_models/model_" + args.hashcode + "_fold_" + str(fold + 1) + "_BEST"
 
         y_pred = predict(val_dataset, filename)
         y_true = val_dataset.label
-        #print(pred.shape)
         bestcv = []
         for m in metrics_cv_dict.values():
             bestcv.append(m(y_true, y_pred))
@@ -217,12 +221,12 @@ def main():
     print(train_metrics_cv)
     print(val_metrics_cv)
     print(best_cv)
-    #metrics_list = [train_metrics_cv, val_metrics_cv]
     row_format = "{:>12}" * (len(metrics_dict.keys()) + 1)
     print(row_format.format("", *(metrics_dict.keys())))
     print(row_format.format("Train", *train_metrics_cv))
     print(row_format.format("Val", *val_metrics_cv))
     print(row_format.format("Best", *best_cv))
+
 
 if __name__ == '__main__':
     main()
