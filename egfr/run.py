@@ -168,7 +168,7 @@ def train_validate_united(train_dataset,
         print(e, '--', 'TRAINING ==============>')
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
             mord_ft = mord_ft.float().to(train_device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(train_device)
+            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device) #view((-1, 1, 42, 150))
             # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(train_device)
@@ -190,7 +190,7 @@ def train_validate_united(train_dataset,
         print(e, '--', 'VALIDATION ==============>')
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
             mord_ft = mord_ft.float().to(val_device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(val_device)
+            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(val_device)
             # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(val_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(val_device)
@@ -268,7 +268,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-

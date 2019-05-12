@@ -64,9 +64,8 @@ def save_model(model, model_dir_path, hash_code):
     if not os.path.exists(model_dir_path):
         os.makedirs(model_dir_path)
     torch.save(model.state_dict(), "{}/model_{}_{}".format(model_dir_path, hash_code, "BEST"))
-
+    print('Save done!')
 
 def load_model():
     pass
-
 
