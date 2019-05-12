@@ -56,7 +56,7 @@ def train_validate_united(train_dataset,
         print('FOLD', fold, '--', 'EPOC', e+1, '--', 'TRAINING...')
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
             mord_ft = mord_ft.float().to(train_device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(train_device)
+            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device)
             # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(train_device)
@@ -78,7 +78,7 @@ def train_validate_united(train_dataset,
         print('FOLD', fold, '--', 'EPOC', e+1, '--', 'VALIDATION...')
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
             mord_ft = mord_ft.float().to(val_device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(val_device)
+            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(val_device)
             # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(val_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(val_device)
@@ -144,7 +144,7 @@ def predict(dataset, model_path, device='cpu'):
     for i, (mord_ft, non_mord_ft, label) in enumerate(loader):
         with torch.no_grad():
             mord_ft = mord_ft.float().to(device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 42, 150)).float().to(device)
+            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(device)
             mat_ft = non_mord_ft.squeeze(1).float().to(device)
             # Forward to get smiles and equivalent weights
             o = united_net(non_mord_ft, mord_ft, mat_ft)
@@ -208,14 +208,15 @@ def main():
         for m in metrics_cv_dict.values():
             bestcv.append(m(y_true, y_pred))
 
+        print(bestcv)
         best_cv.append(bestcv)
-        
-
 
     train_metrics_cv = np.round(np.array([list(d.values()) for d in train_metrics_cv]).mean(axis=0), decimals=4)
     val_metrics_cv = np.round(np.array([list(d.values()) for d in val_metrics_cv]).mean(axis=0), decimals=4)
-    print(best_cv)
     best_cv = np.round(np.array([d for d in best_cv]).mean(axis=0), decimals=4)
+    print(train_metrics_cv)
+    print(val_metrics_cv)
+    print(best_cv)
     #metrics_list = [train_metrics_cv, val_metrics_cv]
     row_format = "{:>12}" * (len(metrics_dict.keys()) + 1)
     print(row_format.format("", *(metrics_dict.keys())))
