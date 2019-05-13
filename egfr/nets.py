@@ -97,10 +97,11 @@ class AttentionNet(nn.Module):
 
 
 class UnitedNet(nn.Module):
-    def __init__(self, dense_dim, use_mat=True, infer=False, dir_path=None):
+    def __init__(self, dense_dim, use_mat=True, infer=False, dir_path=None, vis_thresh=0.8):
         super(UnitedNet, self).__init__()
         self.use_mat = use_mat
         self.infer = infer
+        self.vis_thresh = vis_thresh
         self.dir_path = dir_path
         if self.dir_path:
             self.smile_out_f = open(os.path.join(self.dir_path, 'smiles.txt'), 'w')
@@ -184,20 +185,24 @@ class UnitedNet(nn.Module):
         # FORWARD ATTENTION
         if self.use_mat:
             x_mat = torch.bmm(x_mat, x_comb.unsqueeze(-1)).squeeze(-1)
+            probs = torch.sigmoid(self.att_fc(x_mat))
+
             if self.infer:
                 if not smiles:
                     raise ValueError('Please input smiles')
                 x_mat_txt = x_mat.cpu().detach().numpy().tolist()
                 x_mat_txt = ["\t".join([str(round(elem, 4)) for elem in seq]) for seq in x_mat_txt]
-                for smile, weight in zip(smiles, x_mat_txt):
-                    self.weight_f.write(weight + '\n')
-                    self.smile_out_f.write(smile + '\n')
-            x_mat = torch.sigmoid(self.att_fc(x_mat))
-            return x_mat
-        else:
-            x_comb = torch.sigmoid(self.comb_fc3(x_comb))
-            return x_comb
+                prob_list = probs.cpu().detach().numpy().tolist()
+                print(prob_list)
+                for smile, weight, prob in zip(smiles, x_mat_txt, prob_list):
+                    if prob[0] > self.vis_thresh:
+                        self.weight_f.write(weight + '\n')
+                        self.smile_out_f.write(smile + '\n')
 
+            return probs
+        else:
+            probs = torch.sigmoid(self.comb_fc3(x_comb))
+            return probs
 
     def __del__(self):
         print('Closing files ...')
