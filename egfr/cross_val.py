@@ -12,6 +12,8 @@ import utils
 
 def train_validate_united(train_dataset,
                           val_dataset,
+                          use_mord,
+                          use_mat,
                           train_device,
                           val_device,
                           opt_type,
@@ -33,7 +35,7 @@ def train_validate_united(train_dataset,
     # tensorboard_logger.configure('logs/{}_FOLD_{}'.format(hash_code, fold))
 
     criterion = nn.BCELoss()
-    united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'), use_mat=True).to(train_device)
+    united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'), use_mord=use_mord, use_mat=use_mat).to(train_device)
 
     if opt_type == 'sgd':
         opt = optim.SGD(united_net.parameters(),
@@ -162,7 +164,12 @@ def main():
     parser.add_argument('-g', '--gpu', help='Use GPU or Not?', action='store_true')
     parser.add_argument('-c', '--hashcode', help='Hashcode for tf.events', dest='hashcode', default='TEST')
     parser.add_argument('-l', '--lr', help='Learning rate', dest='lr', default=1e-5, type=float)
+    parser.add_argument('-umo', '--use_mord', help='Use mord feature or not', dest='use_mord', default=1, type=int)
+    parser.add_argument('-uma', '--use_mat', help='Use mat feature or not', dest='use_mat', default=1, type=int)
+
     args = parser.parse_args()
+    args.use_mord = args.use_mord == 1
+    args.use_mat = args.use_mat == 1
 
     if args.gpu:
         train_device = 'cuda'
@@ -192,6 +199,8 @@ def main():
 
         train_metrics, val_metrics = train_validate_united(train_dataset,
                                                            val_dataset,
+                                                           args.use_mord,
+                                                           args.use_mat,
                                                            train_device,
                                                            val_device,
                                                            args.opt,
