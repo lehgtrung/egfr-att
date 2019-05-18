@@ -57,6 +57,8 @@ def train_validate_united(train_dataset,
         train_labels = []
         val_labels = []
         print('FOLD', fold, '--', 'EPOC', e+1, '--', 'TRAINING...')
+        # TRAIN_MODE
+        united_net.train()
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
             mord_ft = mord_ft.float().to(train_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device)
@@ -78,6 +80,8 @@ def train_validate_united(train_dataset,
 
         # Validate after each epoch
         print('FOLD', fold, '--', 'EPOC', e+1, '--', 'VALIDATION...')
+        # EVAL_MODE
+        united_net.eval()
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
             mord_ft = mord_ft.float().to(val_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(val_device)
