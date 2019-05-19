@@ -5,9 +5,10 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedKFold
 import numpy as np
+import os
 
 
-def train_validation_split(data_path):
+def read_data(data_path):
     data = None
     if data_path.endswith('.json'):
         try:
@@ -19,23 +20,21 @@ def train_validation_split(data_path):
             data = pd.read_json(data_path, compression='zip', lines=True)
         except ValueError:
             data = pd.read_json(data_path, compression='zip')
+    return data
+
+
+def train_validation_split(data_path):
+    train_path = data_path.split('.')[0] + '_' + 'train.json'
+    val_path = data_path.split('.')[0] + '_' + 'val.json'
+    if os.path.exists(train_path) and os.path.exists(val_path):
+        return read_data(train_path), read_data(val_path)
+    data = read_data(data_path)
     return train_test_split(data, test_size=0.2, random_state=42)
 
 
 def train_cross_validation_split(data_path):
     kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-
-    data = None
-    if data_path.endswith('.json'):
-        try:
-            data = pd.read_json(data_path, lines=True)
-        except ValueError:
-            data = pd.read_json(data_path)
-    if data_path.endswith('.zip'):
-        try:
-            data = pd.read_json(data_path, compression='zip', lines=True)
-        except ValueError:
-            data = pd.read_json(data_path, compression='zip')
+    data = read_data(data_path)
 
     #data = data.sample(frac=0.1)
     for train_id, val_id in kfold.split(X=np.empty((len(data['active']),1)), y=data['active']):
@@ -44,7 +43,10 @@ def train_cross_validation_split(data_path):
 
 class EGFRDataset(data.Dataset):
     def __init__(self, data, infer=False):
-        self.data = data
+        if isinstance(data, pd.DataFrame):
+            self.data = data
+        elif isinstance(data, str):
+            self.data = read_data(data)
         self.NON_MORD_NAMES = ['smile_ft', 'id', 'subset', 'quinazoline', 'pyrimidine', 'smiles', 'active']
         self.infer = infer
 
@@ -72,6 +74,11 @@ class EGFRDataset(data.Dataset):
 
     def get_smile_ft(self):
         return self.non_mord_ft
+
+    def persist(self, mode):
+        if not os.path.exists('data/egfr_10_full_ft_pd_lines_{}.json'.format(mode)):
+            self.data.to_json('data/egfr_10_full_ft_pd_lines_{}.json'.format(mode),
+                              orient='records', lines=True)
 
 
 

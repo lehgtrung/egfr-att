@@ -2,7 +2,7 @@ import argparse
 import torch
 import torch.nn as nn
 import tensorboard_logger
-from nets import CnnNet, DenseNet, CombinedNet, AttentionNet, UnitedNet
+from nets import UnitedNet
 from torch.utils.data import dataloader
 from dataset import EGFRDataset, train_validation_split
 import torch.optim as optim
@@ -19,7 +19,8 @@ def train_validate_united(train_dataset,
                           batch_size,
                           metrics,
                           hash_code,
-                          lr):
+                          lr,
+                          eval):
     train_loader = dataloader.DataLoader(dataset=train_dataset,
                                          batch_size=batch_size,
                                          collate_fn=utils.custom_collate,
@@ -45,6 +46,7 @@ def train_validate_united(train_dataset,
 
     min_loss = 100  # arbitary large number
     min_loss_idx = 0
+    early_stop_count = 0
     for e in range(n_epoch):
         train_losses = []
         val_losses = []
@@ -54,6 +56,8 @@ def train_validate_united(train_dataset,
         val_labels = []
         print(e, '--', 'TRAINING ==============>')
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
+            if eval:
+                united_net.train()
             mord_ft = mord_ft.float().to(train_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device) #view((-1, 1, 42, 150))
             # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
@@ -76,6 +80,8 @@ def train_validate_united(train_dataset,
         # Validate after each epoch
         print(e, '--', 'VALIDATION ==============>')
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
+            if eval:
+                united_net.eval()
             mord_ft = mord_ft.float().to(val_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(val_device)
             # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(val_device)
@@ -109,9 +115,16 @@ def train_validate_united(train_dataset,
                                          val_metric, e + 1)
         loss_epoch = sum(val_losses) / len(val_losses)
         if loss_epoch < min_loss:
+            early_stop_count = 0
             min_loss_idx = e
+            print(min_loss_idx)
             min_loss = loss_epoch
             utils.save_model(united_net, "data/trained_models", hash_code)
+        else:
+            early_stop_count += 1
+            if early_stop_count > 50:
+                print('Traning can not improve from epoch {}\tBest loss: {}'.format(e, min_loss))
+                break
 
     train_metrics = {}
     val_metrics = {}
@@ -120,6 +133,36 @@ def train_validate_united(train_dataset,
         val_metrics[key] = metrics[key](val_labels, val_outputs)
 
     return train_metrics, val_metrics
+
+
+def predict(dataset, model_path, eval, device='cpu'):
+    losses = []
+    criterion = nn.BCELoss()
+    loader = dataloader.DataLoader(dataset=dataset,
+                                   batch_size=128,
+                                   collate_fn=utils.custom_collate,
+                                   shuffle=True)
+    united_net = UnitedNet(dense_dim=dataset.get_dim('mord'), use_mat=True).to(device)
+    united_net.load_state_dict(torch.load(model_path, map_location=device))
+    if eval:
+        united_net.eval()
+    out = []
+    for i, (mord_ft, non_mord_ft, label) in enumerate(loader):
+        with torch.no_grad():
+            mord_ft = mord_ft.float().to(device)
+            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(device)
+            mat_ft = non_mord_ft.squeeze(1).float().to(device)
+            label = label.float().to(device)
+            # Forward to get smiles and equivalent weights
+            o = united_net(non_mord_ft, mord_ft, mat_ft)
+            losses.append(criterion(o, label).item())
+            out.append(o)
+    print('Forward done !!!')
+    print('Loss prediction: ', sum(losses) / len(losses))
+    out = np.concatenate(out)
+    print(out[np.where(out > 0.5)])
+    print(len(out))
+    return out
 
 
 def main():
@@ -131,27 +174,38 @@ def main():
     parser.add_argument('-g', '--gpu', help='Use GPU or Not?', action='store_true')
     parser.add_argument('-c', '--hashcode', help='Hashcode for tf.events', dest='hashcode', default='TEST')
     parser.add_argument('-l', '--lr', help='Learning rate', dest='lr', default=1e-5, type=float)
+    parser.add_argument('-f', '--eval', help='Using eval during training ?', dest='eval', default=1, type=int)
+    parser.add_argument('-k', '--mode', help='Train or predict ?', dest='mode', default='train', type=str)
+    parser.add_argument('-m', '--model_path', help='Trained model path', dest='model_path', type=str)
     args = parser.parse_args()
 
     train_data, val_data = train_validation_split(args.dataset)
     train_dataset = EGFRDataset(train_data)
+    train_dataset.persist('train')
     val_dataset = EGFRDataset(val_data)
+    val_dataset.persist('val')
     if args.gpu:
         train_device = 'cuda'
         val_device = 'cuda'
     else:
         train_device = 'cpu'
         val_device = 'cpu'
-    train_validate_united(train_dataset,
-                          val_dataset,
-                          train_device,
-                          val_device,
-                          args.opt,
-                          int(args.epochs),
-                          int(args.batchsize),
-                          {'sensitivity': sensitivity, 'specificity': specificity, 'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
-                          args.hashcode,
-                          args.lr)
+
+    if args.mode == 'train':
+        train_validate_united(train_dataset,
+                              val_dataset,
+                              train_device,
+                              val_device,
+                              args.opt,
+                              int(args.epochs),
+                              int(args.batchsize),
+                              {'sensitivity': sensitivity, 'specificity': specificity, 'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
+                              args.hashcode,
+                              args.lr,
+                              args.eval==1)
+    else:
+        pred_dataset = EGFRDataset(args.dataset)
+        predict(pred_dataset, args.model_path, args.eval==1, train_device)
 
 
 if __name__ == '__main__':
