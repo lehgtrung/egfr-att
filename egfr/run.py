@@ -8,6 +8,8 @@ from dataset import EGFRDataset, train_validation_split
 import torch.optim as optim
 from metrics import *
 import utils
+import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 
 
 def train_validate_united(train_dataset,
@@ -132,32 +134,27 @@ def train_validate_united(train_dataset,
 
 
 def predict(dataset, model_path, device='cpu'):
-    losses = []
-    criterion = nn.BCELoss()
     loader = dataloader.DataLoader(dataset=dataset,
                                    batch_size=128,
                                    collate_fn=utils.custom_collate,
                                    shuffle=False)
     united_net = UnitedNet(dense_dim=dataset.get_dim('mord'), use_mat=True).to(device)
     united_net.load_state_dict(torch.load(model_path, map_location=device))
+    # EVAL_MODE
     united_net.eval()
-    out = []
+    probas = []
     for i, (mord_ft, non_mord_ft, label) in enumerate(loader):
         with torch.no_grad():
             mord_ft = mord_ft.float().to(device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(device)
             mat_ft = non_mord_ft.squeeze(1).float().to(device)
-            label = label.float().to(device)
             # Forward to get smiles and equivalent weights
-            o = united_net(non_mord_ft, mord_ft, mat_ft)
-            losses.append(criterion(o, label).item())
-            out.append(o)
+            proba = united_net(non_mord_ft, mord_ft, mat_ft)
+            probas.append(proba)
     print('Forward done !!!')
-    print('Loss prediction: ', sum(losses) / len(losses))
-    out = np.concatenate(out)
-    print(out[np.where(out > 0.5)])
-    print(len(out))
-    return out
+    probas = np.concatenate(probas)
+    print(probas[np.where(probas > 0.5)])
+    return probas
 
 
 def main():
@@ -198,7 +195,14 @@ def main():
                               args.lr)
     else:
         pred_dataset = EGFRDataset(args.dataset)
-        predict(pred_dataset, args.model_path, train_device)
+        y_pred = predict(pred_dataset, args.model_path, train_device)
+        y_true = pred_dataset.label
+        fpr, tpr, thresholds = metrics.roc_curve(y_true, y_pred, pos_label=1)
+        auc_roc = metrics.roc_auc_score(y_true, y_pred)
+        print('AUC: {:4f}'.format(auc_roc))
+        plt.plot(fpr, tpr)
+        # plt.show()
+        plt.savefig('data/ROC_{}'.format(args.model_path.split('/')[-1] + '.png'))
 
 
 if __name__ == '__main__':

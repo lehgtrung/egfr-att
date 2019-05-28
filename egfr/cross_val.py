@@ -137,24 +137,24 @@ def predict(dataset, model_path, device='cpu'):
     loader = dataloader.DataLoader(dataset=dataset,
                                    batch_size=128,
                                    collate_fn=utils.custom_collate,
-                                   shuffle=True)
+                                   shuffle=False)
     united_net = UnitedNet(dense_dim=dataset.get_dim('mord'), use_mat=True).to(device)
     united_net.load_state_dict(torch.load(model_path, map_location=device))
     # EVAL_MODE
     united_net.eval()
-    out = []
+    probas = []
     for i, (mord_ft, non_mord_ft, label) in enumerate(loader):
         with torch.no_grad():
             mord_ft = mord_ft.float().to(device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(device)
             mat_ft = non_mord_ft.squeeze(1).float().to(device)
             # Forward to get smiles and equivalent weights
-            o = united_net(non_mord_ft, mord_ft, mat_ft)
-            out.append(o)
+            proba = united_net(non_mord_ft, mord_ft, mat_ft)
+            probas.append(proba)
     print('Forward done !!!')
-    out = np.concatenate(out)
-    out = out.squeeze()
-    return out
+    probas = np.concatenate(probas)
+    # probas = probas.squeeze()
+    return probas
 
 
 def main():
