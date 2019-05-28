@@ -23,12 +23,12 @@ def train_validate_united(train_dataset,
     train_loader = dataloader.DataLoader(dataset=train_dataset,
                                          batch_size=batch_size,
                                          collate_fn=utils.custom_collate,
-                                         shuffle=True)
+                                         shuffle=False)
 
     val_loader = dataloader.DataLoader(dataset=val_dataset,
                                        batch_size=batch_size,
                                        collate_fn=utils.custom_collate,
-                                       shuffle=True)
+                                       shuffle=False)
 
     tensorboard_logger.configure('logs/' + hash_code)
 
@@ -57,8 +57,7 @@ def train_validate_united(train_dataset,
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
             united_net.train()
             mord_ft = mord_ft.float().to(train_device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device) #view((-1, 1, 42, 150))
-            # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
+            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(train_device)
 
@@ -81,13 +80,12 @@ def train_validate_united(train_dataset,
             united_net.eval()
             mord_ft = mord_ft.float().to(val_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(val_device)
-            # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(val_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(val_device)
 
             with torch.no_grad():
                 outputs = united_net(non_mord_ft, mord_ft, mat_ft)
-                print(outputs[-20:])
+                # print(outputs[-1, -20:])
 
                 loss = criterion(outputs, label)
                 val_losses.append(float(loss.item()))
@@ -120,7 +118,7 @@ def train_validate_united(train_dataset,
             utils.save_model(united_net, "data/trained_models", hash_code)
         else:
             early_stop_count += 1
-            if early_stop_count > 50:
+            if early_stop_count > 20:
                 print('Traning can not improve from epoch {}\tBest loss: {}'.format(e, min_loss))
                 break
 

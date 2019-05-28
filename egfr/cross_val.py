@@ -20,17 +20,16 @@ def train_validate_united(train_dataset,
                           metrics,
                           hash_code,
                           lr,
-                          eval,
                           fold):
     train_loader = dataloader.DataLoader(dataset=train_dataset,
                                          batch_size=batch_size,
                                          collate_fn=utils.custom_collate,
-                                         shuffle=True)
+                                         shuffle=False)
 
     val_loader = dataloader.DataLoader(dataset=val_dataset,
                                        batch_size=batch_size,
                                        collate_fn=utils.custom_collate,
-                                       shuffle=True)
+                                       shuffle=False)
 
     # tensorboard_logger.configure('logs/' + hash_code)
 
@@ -57,11 +56,9 @@ def train_validate_united(train_dataset,
         val_labels = []
         print('FOLD', fold, '-- EPOCH', e+1, '--', 'TRAINING')
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
-            if eval:
-                united_net.train()
+            united_net.train()
             mord_ft = mord_ft.float().to(train_device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device) #view((-1, 1, 42, 150))
-            # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
+            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(train_device)
 
@@ -81,11 +78,9 @@ def train_validate_united(train_dataset,
         # Validate after each epoch
         print('FOLD', fold, '-- EPOCH', e+1, '--', 'VALIDATION')
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
-            if eval:
-                united_net.eval()
+            united_net.eval()
             mord_ft = mord_ft.float().to(val_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(val_device)
-            # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(val_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(val_device)
 
@@ -125,7 +120,7 @@ def train_validate_united(train_dataset,
             utils.save_model(united_net, "data/trained_models", hash_code + '_' + str(fold + 1))
         else:
             early_stop_count += 1
-            if early_stop_count > 50:
+            if early_stop_count > 20:
                 print('Traning can not improve from epoch {}\tBest loss: {}'.format(e, min_loss))
                 break
 
@@ -172,7 +167,6 @@ def main():
     parser.add_argument('-g', '--gpu', help='Use GPU or Not?', action='store_true')
     parser.add_argument('-c', '--hashcode', help='Hashcode for tf.events', dest='hashcode', default='TEST')
     parser.add_argument('-l', '--lr', help='Learning rate', dest='lr', default=1e-5, type=float)
-    parser.add_argument('-f', '--eval', help='Using eval during training ?', dest='eval', default=1, type=int)
     parser.add_argument('-k', '--mode', help='Train or predict ?', dest='mode', default='train', type=str)
     parser.add_argument('-m', '--model_path', help='Trained model path', dest='model_path', type=str)
 
@@ -203,6 +197,8 @@ def main():
     for fold, (train_data, val_data) in enumerate(train_cross_validation_split(args.dataset)):
         train_dataset = EGFRDataset(train_data)
         val_dataset = EGFRDataset(val_data)
+        train_dataset.persist('train')
+        val_dataset.persist('val')
 
         train_metrics, val_metrics = train_validate_united(train_dataset,
                                                            val_dataset,
@@ -211,10 +207,10 @@ def main():
                                                            args.opt,
                                                            int(args.epochs),
                                                            int(args.batchsize),
-                                                           {'sensitivity': sensitivity, 'specificity': specificity, 'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
+                                                           {'sensitivity': sensitivity, 'specificity': specificity,
+                                                            'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
                                                            args.hashcode,
                                                            args.lr,
-                                                           args.eval==1,
                                                            fold)
 
         train_metrics_cv.append(train_metrics)

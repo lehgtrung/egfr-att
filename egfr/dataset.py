@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedKFold
 import numpy as np
-import os
+import os, glob
 
 
 def read_data(data_path):
@@ -33,12 +33,17 @@ def train_validation_split(data_path):
 
 
 def train_cross_validation_split(data_path):
-    kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    data = read_data(data_path)
-
-    #data = data.sample(frac=0.1)
-    for train_id, val_id in kfold.split(X=np.empty((len(data['active']),1)), y=data['active']):
-        yield data.iloc[train_id,], data.iloc[val_id,]
+    fold_dirs = glob.glob(os.path.join(data_path, 'folds_*'))
+    if len(fold_dirs) > 0:
+        for fold_dir in fold_dirs:
+            train_path = os.path.join(fold_dir, 'train.json')
+            val_path = os.path.join(fold_dir, 'val.json')
+            yield read_data(train_path), read_data(val_path)
+    else:
+        kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+        data = read_data(data_path)
+        for train_ids, val_id in kfold.split(X=np.empty((len(data['active']), 1)), y=data['active']):
+            yield data.iloc[train_ids, ], data.iloc[val_id, ]
 
 
 class EGFRDataset(data.Dataset):
