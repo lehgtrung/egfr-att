@@ -90,6 +90,7 @@ def train_validate_united(train_dataset,
 
             with torch.no_grad():
                 outputs = united_net(non_mord_ft, mord_ft, mat_ft)
+                print(outputs)
 
                 loss = criterion(outputs, label)
                 val_losses.append(float(loss.item()))
@@ -141,7 +142,7 @@ def predict(dataset, model_path, eval, device='cpu'):
     loader = dataloader.DataLoader(dataset=dataset,
                                    batch_size=128,
                                    collate_fn=utils.custom_collate,
-                                   shuffle=True)
+                                   shuffle=False)
     united_net = UnitedNet(dense_dim=dataset.get_dim('mord'), use_mat=True).to(device)
     united_net.load_state_dict(torch.load(model_path, map_location=device))
     if eval:
@@ -167,7 +168,8 @@ def predict(dataset, model_path, eval, device='cpu'):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--dataset', help='Input dataset', dest='dataset', default='data/egfr_10_full_ft_pd_lines.json')
+    parser.add_argument('-d', '--dataset', help='Input dataset', dest='dataset',
+                        default='data/egfr_10_full_ft_pd_lines.json')
     parser.add_argument('-e', '--epochs', help='Number of epochs', dest='epochs', default=500)
     parser.add_argument('-b', '--batchsize', help='Batch size', dest='batchsize', default=128)
     parser.add_argument('-o', '--opt', help='Optimizer adam or sgd', dest='opt', default='adam')
@@ -199,7 +201,8 @@ def main():
                               args.opt,
                               int(args.epochs),
                               int(args.batchsize),
-                              {'sensitivity': sensitivity, 'specificity': specificity, 'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
+                              {'sensitivity': sensitivity, 'specificity': specificity,
+                               'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
                               args.hashcode,
                               args.lr,
                               args.eval==1)
