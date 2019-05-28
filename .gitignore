@@ -12,6 +12,8 @@ vis/
 
 # Ideas
 .idea/
+data/
+egfr/data/
 
 # Distribution / packaging
 .Python
