@@ -12,8 +12,6 @@ import utils
 
 def train_validate_united(train_dataset,
                           val_dataset,
-                          use_mord,
-                          use_mat,
                           train_device,
                           val_device,
                           opt_type,
@@ -22,6 +20,7 @@ def train_validate_united(train_dataset,
                           metrics,
                           hash_code,
                           lr,
+                          eval,
                           fold):
     train_loader = dataloader.DataLoader(dataset=train_dataset,
                                          batch_size=batch_size,
@@ -32,10 +31,11 @@ def train_validate_united(train_dataset,
                                        batch_size=batch_size,
                                        collate_fn=utils.custom_collate,
                                        shuffle=True)
-    # tensorboard_logger.configure('logs/{}_FOLD_{}'.format(hash_code, fold))
+
+    # tensorboard_logger.configure('logs/' + hash_code)
 
     criterion = nn.BCELoss()
-    united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'), use_mord=use_mord, use_mat=use_mat).to(train_device)
+    united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'), use_mat=True).to(train_device)
 
     if opt_type == 'sgd':
         opt = optim.SGD(united_net.parameters(),
@@ -47,8 +47,7 @@ def train_validate_united(train_dataset,
 
     min_loss = 100  # arbitary large number
     min_loss_idx = 0
-    with open("logs/best_model_fold_{}".format(fold), 'w') as f:
-        f.write(str(0))
+    early_stop_count = 0
     for e in range(n_epoch):
         train_losses = []
         val_losses = []
@@ -56,12 +55,13 @@ def train_validate_united(train_dataset,
         val_outputs = []
         train_labels = []
         val_labels = []
-        print('FOLD', fold, '--', 'EPOC', e+1, '--', 'TRAINING...')
-        # TRAIN_MODE
-        united_net.train()
+        print('FOLD', fold, '-- EPOCH', e+1, '--', 'TRAINING')
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
+            if eval:
+                united_net.train()
             mord_ft = mord_ft.float().to(train_device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device)
+            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device) #view((-1, 1, 42, 150))
+            # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(train_device)
 
@@ -79,12 +79,13 @@ def train_validate_united(train_dataset,
             opt.step()
 
         # Validate after each epoch
-        print('FOLD', fold, '--', 'EPOC', e+1, '--', 'VALIDATION...')
-        # EVAL_MODE
-        united_net.eval()
+        print('FOLD', fold, '-- EPOCH', e+1, '--', 'VALIDATION')
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
+            if eval:
+                united_net.eval()
             mord_ft = mord_ft.float().to(val_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(val_device)
+            # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(val_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(val_device)
 
@@ -100,34 +101,33 @@ def train_validate_united(train_dataset,
         val_outputs = torch.stack(val_outputs)
         train_labels = torch.stack(train_labels)
         val_labels = torch.stack(val_labels)
-
-        loss_epoch = sum(val_losses) / len(val_losses)
-        print("LOSS EPOCH: ", loss_epoch)
-        if loss_epoch < min_loss:
-            min_loss_idx = e
-            min_loss = loss_epoch
-            print('MIN LOSS IDX ', min_loss_idx)
-            with open("logs/best_model_fold_{}".format(fold), 'w') as f:
-                f.write(str(e))
-            filename = hash_code + "_fold_" + str(fold)
-            folder = "data/trained_models/"
-            utils.save_model(united_net, folder, filename)
-
-        if (e+1) % 10 == 0:
-            tensorboard_logger.log_value('train_loss', sum(train_losses) / len(train_losses), e + 1)
-            tensorboard_logger.log_value('val_loss', sum(val_losses) / len(val_losses), e + 1)
+        tensorboard_logger.log_value('train_loss', sum(train_losses) / len(train_losses), e + 1)
+        tensorboard_logger.log_value('val_loss', sum(val_losses) / len(val_losses), e + 1)
+        if ((e+1) % 10) == 0:
             print('{"metric": "train_loss", "value": %f, "epoch": %d}' % (sum(train_losses) / len(train_losses), e + 1))
             print('{"metric": "val_loss", "value": %f, "epoch": %d}' % (sum(val_losses) / len(val_losses), e + 1))
-            for key in metrics.keys():
-                train_metric = metrics[key](train_labels, train_outputs)
-                val_metric = metrics[key](val_labels, val_outputs)
+        for key in metrics.keys():
+            train_metric = metrics[key](train_labels, train_outputs)
+            val_metric = metrics[key](val_labels, val_outputs)
+            if ((e+1) % 10) == 0:
                 print('{"metric": "%s", "value": %f, "epoch": %d}' % ('train_' + key, train_metric, e + 1))
                 print('{"metric": "%s", "value": %f, "epoch": %d}' % ('val_' + key, val_metric, e + 1))
-                tensorboard_logger.log_value('train_{}'.format(key),
-                                             train_metric, e + 1)
-                tensorboard_logger.log_value('val_{}'.format(key),
-                                             val_metric, e + 1)
-            print('MIN LOSS IDX ', min_loss_idx)
+            tensorboard_logger.log_value('train_{}'.format(key),
+                                         train_metric, e + 1)
+            tensorboard_logger.log_value('val_{}'.format(key),
+                                         val_metric, e + 1)
+        loss_epoch = sum(val_losses) / len(val_losses)
+        if loss_epoch < min_loss:
+            early_stop_count = 0
+            min_loss_idx = e
+            print(min_loss_idx)
+            min_loss = loss_epoch
+            utils.save_model(united_net, "data/trained_models", hash_code + '_' +str(fold + 1))
+        else:
+            early_stop_count += 1
+            if early_stop_count > 50:
+                print('Traning can not improve from epoch {}\tBest loss: {}'.format(e, min_loss))
+                break
 
     train_metrics = {}
     val_metrics = {}
@@ -145,6 +145,8 @@ def predict(dataset, model_path, device='cpu'):
                                    shuffle=True)
     united_net = UnitedNet(dense_dim=dataset.get_dim('mord'), use_mat=True).to(device)
     united_net.load_state_dict(torch.load(model_path, map_location=device))
+    # EVAL_MODE
+    united_net.eval()
     out = []
     for i, (mord_ft, non_mord_ft, label) in enumerate(loader):
         with torch.no_grad():
@@ -156,6 +158,7 @@ def predict(dataset, model_path, device='cpu'):
             out.append(o)
     print('Forward done !!!')
     out = np.concatenate(out)
+    out = out.squeeze()
     return out
 
 
@@ -169,12 +172,12 @@ def main():
     parser.add_argument('-g', '--gpu', help='Use GPU or Not?', action='store_true')
     parser.add_argument('-c', '--hashcode', help='Hashcode for tf.events', dest='hashcode', default='TEST')
     parser.add_argument('-l', '--lr', help='Learning rate', dest='lr', default=1e-5, type=float)
-    parser.add_argument('-umo', '--use_mord', help='Use mord feature or not', dest='use_mord', default=1, type=int)
-    parser.add_argument('-uma', '--use_mat', help='Use mat feature or not', dest='use_mat', default=1, type=int)
+    parser.add_argument('-f', '--eval', help='Using eval during training ?', dest='eval', default=1, type=int)
+    parser.add_argument('-k', '--mode', help='Train or predict ?', dest='mode', default='train', type=str)
+    parser.add_argument('-m', '--model_path', help='Trained model path', dest='model_path', type=str)
 
     args = parser.parse_args()
-    args.use_mord = args.use_mord == 1
-    args.use_mat = args.use_mat == 1
+
 
     if args.gpu:
         train_device = 'cuda'
@@ -203,21 +206,21 @@ def main():
         val_dataset = EGFRDataset(val_data)
 
         train_metrics, val_metrics = train_validate_united(train_dataset,
-                                                           val_dataset,
-                                                           args.use_mord,
-                                                           args.use_mat,
-                                                           train_device,
-                                                           val_device,
-                                                           args.opt,
-                                                           int(args.epochs),
-                                                           int(args.batchsize),
-                                                           metrics_dict,
-                                                           args.hashcode,
-                                                           args.lr,
-                                                           fold + 1)
+                                                          val_dataset,
+                                                          train_device,
+                                                          val_device,
+                                                          args.opt,
+                                                          int(args.epochs),
+                                                          int(args.batchsize),
+                                                          {'sensitivity': sensitivity, 'specificity': specificity, 'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
+                                                          args.hashcode,
+                                                          args.lr,
+                                                          args.eval==1,
+                                                           fold)
+
         train_metrics_cv.append(train_metrics)
         val_metrics_cv.append(val_metrics)
-        filename = "data/trained_models/model_" + args.hashcode + "_fold_" + str(fold + 1) + "_BEST"
+        filename = "data/trained_models/model_" + args.hashcode + '_' + str(fold + 1) + "_BEST"
 
         y_pred = predict(val_dataset, filename)
         y_true = val_dataset.label
@@ -225,7 +228,8 @@ def main():
         for m in metrics_cv_dict.values():
             bestcv.append(m(y_true, y_pred))
 
-        print(bestcv)
+        print('val_metrics', val_metrics)
+        print('Test', bestcv)
         best_cv.append(bestcv)
 
     train_metrics_cv = np.round(np.array([list(d.values()) for d in train_metrics_cv]).mean(axis=0), decimals=4)
@@ -238,14 +242,8 @@ def main():
     print(row_format.format("", *(metrics_dict.keys())))
     print(row_format.format("Train", *train_metrics_cv))
     print(row_format.format("Val", *val_metrics_cv))
-    print(row_format.format("Best", *best_cv))
+    print(row_format.format("Load", *best_cv))
 
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
