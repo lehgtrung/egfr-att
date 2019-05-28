@@ -55,8 +55,7 @@ def train_validate_united(train_dataset,
         val_labels = []
         print(e, '--', 'TRAINING ==============>')
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
-            if eval:
-                united_net.train()
+            united_net.train()
             mord_ft = mord_ft.float().to(train_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device) #view((-1, 1, 42, 150))
             # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(train_device)
@@ -88,7 +87,7 @@ def train_validate_united(train_dataset,
 
             with torch.no_grad():
                 outputs = united_net(non_mord_ft, mord_ft, mat_ft)
-                print(outputs)
+                print(outputs[-20:])
 
                 loss = criterion(outputs, label)
                 val_losses.append(float(loss.item()))
