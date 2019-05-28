@@ -161,7 +161,8 @@ def predict(dataset, model_path, device='cpu'):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--dataset', help='Input dataset', dest='dataset', default='data/egfr_10_full_ft_pd_lines.json')
+    parser.add_argument('-d', '--dataset', help='Input dataset', dest='dataset',
+                        default='data/egfr_10_full_ft_pd_lines.json')
     parser.add_argument('-e', '--epochs', help='Number of epochs', dest='epochs', default=500)
     parser.add_argument('-b', '--batchsize', help='Batch size', dest='batchsize', default=128)
     parser.add_argument('-o', '--opt', help='Optimizer adam or sgd', dest='opt', default='adam')
