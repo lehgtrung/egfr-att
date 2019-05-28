@@ -19,8 +19,7 @@ def train_validate_united(train_dataset,
                           batch_size,
                           metrics,
                           hash_code,
-                          lr,
-                          eval):
+                          lr):
     train_loader = dataloader.DataLoader(dataset=train_dataset,
                                          batch_size=batch_size,
                                          collate_fn=utils.custom_collate,
@@ -80,8 +79,7 @@ def train_validate_united(train_dataset,
         # Validate after each epoch
         print(e, '--', 'VALIDATION ==============>')
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
-            if eval:
-                united_net.eval()
+            united_net.eval()
             mord_ft = mord_ft.float().to(val_device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(val_device)
             # mat_ft = non_mord_ft.narrow(2, 0, 21).view((-1, 21, 150)).float().to(val_device)
@@ -136,7 +134,7 @@ def train_validate_united(train_dataset,
     return train_metrics, val_metrics
 
 
-def predict(dataset, model_path, eval, device='cpu'):
+def predict(dataset, model_path, device='cpu'):
     losses = []
     criterion = nn.BCELoss()
     loader = dataloader.DataLoader(dataset=dataset,
@@ -145,8 +143,7 @@ def predict(dataset, model_path, eval, device='cpu'):
                                    shuffle=False)
     united_net = UnitedNet(dense_dim=dataset.get_dim('mord'), use_mat=True).to(device)
     united_net.load_state_dict(torch.load(model_path, map_location=device))
-    if eval:
-        united_net.eval()
+    united_net.eval()
     out = []
     for i, (mord_ft, non_mord_ft, label) in enumerate(loader):
         with torch.no_grad():
@@ -176,7 +173,6 @@ def main():
     parser.add_argument('-g', '--gpu', help='Use GPU or Not?', action='store_true')
     parser.add_argument('-c', '--hashcode', help='Hashcode for tf.events', dest='hashcode', default='TEST')
     parser.add_argument('-l', '--lr', help='Learning rate', dest='lr', default=1e-5, type=float)
-    parser.add_argument('-f', '--eval', help='Using eval during training ?', dest='eval', default=1, type=int)
     parser.add_argument('-k', '--mode', help='Train or predict ?', dest='mode', default='train', type=str)
     parser.add_argument('-m', '--model_path', help='Trained model path', dest='model_path', type=str)
     args = parser.parse_args()
@@ -204,11 +200,10 @@ def main():
                               {'sensitivity': sensitivity, 'specificity': specificity,
                                'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
                               args.hashcode,
-                              args.lr,
-                              args.eval==1)
+                              args.lr)
     else:
         pred_dataset = EGFRDataset(args.dataset)
-        predict(pred_dataset, args.model_path, args.eval==1, train_device)
+        predict(pred_dataset, args.model_path, train_device)
 
 
 if __name__ == '__main__':

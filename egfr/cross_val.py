@@ -103,7 +103,7 @@ def train_validate_united(train_dataset,
         val_labels = torch.stack(val_labels)
         tensorboard_logger.log_value('train_loss', sum(train_losses) / len(train_losses), e + 1)
         tensorboard_logger.log_value('val_loss', sum(val_losses) / len(val_losses), e + 1)
-        if ((e+1) % 10) == 0:
+        if (e+1) % 10 == 0:
             print('{"metric": "train_loss", "value": %f, "epoch": %d}' % (sum(train_losses) / len(train_losses), e + 1))
             print('{"metric": "val_loss", "value": %f, "epoch": %d}' % (sum(val_losses) / len(val_losses), e + 1))
         for key in metrics.keys():
@@ -122,7 +122,7 @@ def train_validate_united(train_dataset,
             min_loss_idx = e
             print(min_loss_idx)
             min_loss = loss_epoch
-            utils.save_model(united_net, "data/trained_models", hash_code + '_' +str(fold + 1))
+            utils.save_model(united_net, "data/trained_models", hash_code + '_' + str(fold + 1))
         else:
             early_stop_count += 1
             if early_stop_count > 50:
@@ -178,7 +178,6 @@ def main():
 
     args = parser.parse_args()
 
-
     if args.gpu:
         train_device = 'cuda'
         val_device = 'cuda'
@@ -206,16 +205,16 @@ def main():
         val_dataset = EGFRDataset(val_data)
 
         train_metrics, val_metrics = train_validate_united(train_dataset,
-                                                          val_dataset,
-                                                          train_device,
-                                                          val_device,
-                                                          args.opt,
-                                                          int(args.epochs),
-                                                          int(args.batchsize),
-                                                          {'sensitivity': sensitivity, 'specificity': specificity, 'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
-                                                          args.hashcode,
-                                                          args.lr,
-                                                          args.eval==1,
+                                                           val_dataset,
+                                                           train_device,
+                                                           val_device,
+                                                           args.opt,
+                                                           int(args.epochs),
+                                                           int(args.batchsize),
+                                                           {'sensitivity': sensitivity, 'specificity': specificity, 'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
+                                                           args.hashcode,
+                                                           args.lr,
+                                                           args.eval==1,
                                                            fold)
 
         train_metrics_cv.append(train_metrics)
