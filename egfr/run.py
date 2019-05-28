@@ -176,9 +176,7 @@ def main():
 
     train_data, val_data = train_validation_split(args.dataset)
     train_dataset = EGFRDataset(train_data)
-    train_dataset.persist('train')
     val_dataset = EGFRDataset(val_data)
-    val_dataset.persist('val')
     if args.gpu:
         train_device = 'cuda'
         val_device = 'cuda'

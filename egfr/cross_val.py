@@ -197,8 +197,6 @@ def main():
     for fold, (train_data, val_data) in enumerate(train_cross_validation_split(args.dataset)):
         train_dataset = EGFRDataset(train_data)
         val_dataset = EGFRDataset(val_data)
-        train_dataset.persist('train')
-        val_dataset.persist('val')
 
         train_metrics, val_metrics = train_validate_united(train_dataset,
                                                            val_dataset,

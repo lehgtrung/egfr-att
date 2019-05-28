@@ -29,11 +29,15 @@ def train_validation_split(data_path):
     if os.path.exists(train_path) and os.path.exists(val_path):
         return read_data(train_path), read_data(val_path)
     data = read_data(data_path)
-    return train_test_split(data, test_size=0.2, random_state=42)
+    train_data, val_data = train_test_split(data, test_size=0.2, random_state=42)
+    train_data.to_json(train_path, orient='records', lines=True)
+    val_data.to_json(val_path, orient='records', lines=True)
+    return train_data, val_data
 
 
 def train_cross_validation_split(data_path):
-    fold_dirs = glob.glob(os.path.join(data_path, 'folds_*'))
+    dir_path = os.path.dirname(os.path.abspath(data_path))
+    fold_dirs = glob.glob(os.path.join(dir_path, 'folds_*'))
     if len(fold_dirs) > 0:
         for fold_dir in fold_dirs:
             train_path = os.path.join(fold_dir, 'train.json')
@@ -42,7 +46,14 @@ def train_cross_validation_split(data_path):
     else:
         kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
         data = read_data(data_path)
-        for train_ids, val_id in kfold.split(X=np.empty((len(data['active']), 1)), y=data['active']):
+        for i, (train_ids, val_id) in enumerate(kfold.split(X=np.empty((len(data['active']), 1)),
+                                                            y=data['active'])):
+            train_data = data.iloc[train_ids, ]
+            val_data = data.iloc[val_id, ]
+            os.makedirs(os.path.join(dir_path, 'folds_{}'.format(i)), exist_ok=True)
+            train_data.to_json(os.path.join(os.path.join(dir_path, 'folds_{}'.format(i)), 'train.json'))
+            val_data.to_json(os.path.join(os.path.join(dir_path, 'folds_{}'.format(i)), 'val.json'))
+
             yield data.iloc[train_ids, ], data.iloc[val_id, ]
 
 
@@ -79,11 +90,6 @@ class EGFRDataset(data.Dataset):
 
     def get_smile_ft(self):
         return self.non_mord_ft
-
-    def persist(self, mode):
-        if not os.path.exists('data/egfr_10_full_ft_pd_lines_{}.json'.format(mode)):
-            self.data.to_json('data/egfr_10_full_ft_pd_lines_{}.json'.format(mode),
-                              orient='records', lines=True)
 
 
 
