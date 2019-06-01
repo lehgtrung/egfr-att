@@ -9,6 +9,8 @@ import torch.optim as optim
 from metrics import *
 import utils
 import matplotlib.pyplot as plt
+import os
+from sklearn.metrics import precision_recall_curve
 plt.switch_backend('agg')
 
 
@@ -153,8 +155,33 @@ def predict(dataset, model_path, device='cpu'):
             probas.append(proba)
     print('Forward done !!!')
     probas = np.concatenate(probas)
-    print(probas[np.where(probas > 0.5)])
     return probas
+
+def plot_roc_curve(y_true, y_pred, hashcode=''):
+
+    if not os.path.exists('vis/'):
+        os.makedirs('vis/')
+
+    fpr, tpr, thresholds = metrics.roc_curve(y_true, y_pred, pos_label=1)
+    auc_roc = metrics.roc_auc_score(y_true, y_pred)
+    print('AUC: {:4f}'.format(auc_roc))
+    plt.plot(fpr, tpr)
+    plt.savefig('vis/ROC_{}'.format(hashcode + '.png'))
+    plt.clf()  # Clear figure
+
+def plot_precision_recall(y_true, y_pred, hashcode=''):
+
+    if not os.path.exists('vis/'):
+        os.makedirs('vis/')
+
+    precisions, recalls, thresholds = precision_recall_curve(y_true, y_pred)
+    plt.plot(thresholds, precisions[:-1], label="Precision")
+    plt.plot(thresholds, recalls[:-1], label="Recall")
+    plt.xlabel("Threshold")
+    plt.legend(loc="upper left")
+    plt.ylim([0, 1])
+    plt.savefig('vis/PR_{}'.format(hashcode + '.png'))
+    plt.clf()  # Clear figure
 
 
 def main():
@@ -197,12 +224,9 @@ def main():
         pred_dataset = EGFRDataset(args.dataset)
         y_pred = predict(pred_dataset, args.model_path, train_device)
         y_true = pred_dataset.label
-        fpr, tpr, thresholds = metrics.roc_curve(y_true, y_pred, pos_label=1)
-        auc_roc = metrics.roc_auc_score(y_true, y_pred)
-        print('AUC: {:4f}'.format(auc_roc))
-        plt.plot(fpr, tpr)
-        # plt.show()
-        plt.savefig('data/ROC_{}'.format(args.model_path.split('/')[-1] + '.png'))
+
+        plot_roc_curve(y_true, y_pred, args.model_path.split('/')[-1])
+        plot_precision_recall(y_true, y_pred, args.model_path.split('/')[-1])
 
 
 if __name__ == '__main__':
