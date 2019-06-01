@@ -149,7 +149,7 @@ class UnitedNet(nn.Module):
 
         # PARAMS FOR ATTENTION NET
         if self.use_mat:
-            self.att_fc = nn.Linear(150, 1)
+            self.att_fc = nn.Linear(150, 1, bias=False)
 
     def forward(self, x_non_mord, x_mord, x_mat, smiles=None):
         # FORWARD CNN
