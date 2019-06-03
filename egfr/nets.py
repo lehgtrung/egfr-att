@@ -144,12 +144,12 @@ class UnitedNet(nn.Module):
             self.comb_fc1 = nn.Linear(84 + 64, 128)
         else:
             self.comb_fc1 = nn.Linear(84, 128)
-        self.comb_fc2 = nn.Linear(128, 42)
+        self.comb_fc2 = nn.Linear(128, 150)
         self.comb_fc3 = nn.Linear(42, 1)
 
         # PARAMS FOR ATTENTION NET
         if self.use_mat:
-            self.att_fc = nn.Linear(150, 1, bias=False)
+            self.att_fc = nn.Linear(42 + 150, 1)
 
     def forward(self, x_non_mord, x_mord, x_mat, smiles=None):
         # FORWARD CNN
@@ -185,23 +185,23 @@ class UnitedNet(nn.Module):
         else:
             x_comb = x_non_mord
         x_comb = F.relu(self.comb_fc1(x_comb))
-        x_comb = F.relu(self.comb_fc2(x_comb))
+        x_comb = self.comb_fc2(x_comb)
 
         # FORWARD ATTENTION
         if self.use_mat:
-            x_mat = torch.bmm(x_mat, x_comb.unsqueeze(-1)).squeeze(-1)
+            x_mat = torch.bmm(x_mat.permute(0, 2, 1), x_comb.unsqueeze(-1)).squeeze(-1)
+            x_mat = torch.cat([x_mat, x_comb], dim=1)
             probs = torch.sigmoid(self.att_fc(x_mat))
 
             if self.infer:
                 if not smiles:
                     raise ValueError('Please input smiles')
-                x_mat_txt = x_mat.cpu().detach().numpy().tolist()
-                x_mat_txt = ["\t".join([str(round(elem, 4)) for elem in seq]) for seq in x_mat_txt]
+                alphas = x_comb.cpu().detach().numpy().tolist()
+                alphas = ["\t".join([str(round(elem, 4)) for elem in seq]) for seq in alphas]
                 prob_list = probs.cpu().detach().numpy().tolist()
-                print(prob_list)
-                for smile, weight, prob in zip(smiles, x_mat_txt, prob_list):
+                for smile, alpha, prob in zip(smiles, alphas, prob_list):
                     if prob[0] > self.vis_thresh:
-                        self.weight_f.write(weight + '\n')
+                        self.weight_f.write(alpha + '\n')
                         self.smile_out_f.write(smile + '\n')
 
             return probs
