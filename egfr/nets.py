@@ -108,22 +108,21 @@ class UnitedNet(nn.Module):
             self.smile_out_f = open(os.path.join(self.dir_path, 'smiles.txt'), 'w')
             self.weight_f = open(os.path.join(self.dir_path, 'weight.txt'), 'w')
 
+        print('USING MAT = {}'.format(self.use_mat))
+
         # PARAMS FOR CNN NET
         # Convolutionals
         self.conv_conv1 = nn.Conv2d(1, 6, kernel_size=3)
         self.conv_pool = nn.MaxPool2d(2, 2)
         self.conv_conv2 = nn.Conv2d(6, 16, kernel_size=3)
+        self.relu = nn.ReLU()
 
         # Fully connected
-        self.conv_fc1 = nn.Linear(16 * 9 * 36, 120)
-        self.conv_fc2 = nn.Linear(120, 84)
+        self.conv_fc = nn.Linear(16 * 9 * 36, 120)
 
         # Batch norms
         self.conv_batch_norm1 = nn.BatchNorm2d(6)
         self.conv_batch_norm2 = nn.BatchNorm2d(16)
-
-        # Dropouts
-        self.conv_dropout = nn.Dropout2d()
 
         # PARAMS FOR DENSE NET
         # Fully connected
@@ -135,57 +134,59 @@ class UnitedNet(nn.Module):
             # Batch norms
             self.dense_batch_norm1 = nn.BatchNorm1d(512)
             self.dense_batch_norm2 = nn.BatchNorm1d(128)
+            self.dense_batch_norm3 = nn.BatchNorm1d(64)
 
             # Dropouts
             self.dense_dropout = nn.Dropout()
 
         # PARAMS FOR COMBINED NET
         if self.use_mord:
-            self.comb_fc1 = nn.Linear(84 + 64, 128)
+            self.comb_fc = nn.Linear(120 + 64, 150)
         else:
-            self.comb_fc1 = nn.Linear(84, 128)
-        self.comb_fc2 = nn.Linear(128, 150)
-        self.comb_fc3 = nn.Linear(42, 1)
+            self.comb_fc = nn.Linear(120, 128)
 
         # PARAMS FOR ATTENTION NET
         if self.use_mat:
             self.att_fc = nn.Linear(42 + 150, 1)
+        else:
+            self.comb_fc_alt = nn.Linear(150, 1)
 
     def forward(self, x_non_mord, x_mord, x_mat, smiles=None):
         # FORWARD CNN
-        x_non_mord = F.relu(self.conv_conv1(x_non_mord))
-        x_non_mord = self.conv_dropout(x_non_mord)
+        x_non_mord = self.conv_conv1(x_non_mord)
         x_non_mord = self.conv_batch_norm1(x_non_mord)
+        x_non_mord = self.relu(x_non_mord)
         x_non_mord = self.conv_pool(x_non_mord)
 
-        x_non_mord = F.relu(self.conv_conv2(x_non_mord))
-        x_non_mord = self.conv_dropout(x_non_mord)
+        x_non_mord = self.conv_conv2(x_non_mord)
         x_non_mord = self.conv_batch_norm2(x_non_mord)
+        x_non_mord = self.relu(x_non_mord)
         x_non_mord = self.conv_pool(x_non_mord)
 
-        x_non_mord = x_non_mord.view(-1, 16 * 9 * 36)
-        x_non_mord = F.relu(self.conv_fc1(x_non_mord))
-        x_non_mord = F.relu(self.conv_fc2(x_non_mord))
+        x_non_mord = x_non_mord.view(x_non_mord.size(0), -1)
+        x_non_mord = F.relu(self.conv_fc(x_non_mord))
 
         # FORWARD DENSE
         if self.use_mord:
-            x_mord = F.relu(self.dense_fc1(x_mord))
+            x_mord = self.relu(self.dense_fc1(x_mord))
             x_mord = self.dense_batch_norm1(x_mord)
             x_mord = self.dense_dropout(x_mord)
 
-            x_mord = F.relu(self.dense_fc2(x_mord))
+            x_mord = self.relu(self.dense_fc2(x_mord))
             x_mord = self.dense_batch_norm2(x_mord)
             x_mord = self.dense_dropout(x_mord)
 
-            x_mord = F.relu(self.dense_fc3(x_mord))
+            x_mord = self.relu(self.dense_fc3(x_mord))
+            x_mord = self.dense_batch_norm3(x_mord)
+            x_mord = self.dense_dropout(x_mord)
 
         # FORWARD COMBINE
         if self.use_mord:
             x_comb = torch.cat([x_non_mord, x_mord], dim=1)
         else:
             x_comb = x_non_mord
-        x_comb = F.relu(self.comb_fc1(x_comb))
-        x_comb = self.comb_fc2(x_comb)
+
+        x_comb = F.relu(self.comb_fc(x_comb))
 
         # FORWARD ATTENTION
         if self.use_mat:
@@ -206,7 +207,7 @@ class UnitedNet(nn.Module):
 
             return probs
         else:
-            probs = torch.sigmoid(self.comb_fc3(x_comb))
+            probs = torch.sigmoid(self.comb_fc_alt(x_comb))
             return probs
 
     def __del__(self):

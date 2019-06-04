@@ -18,6 +18,7 @@ def train_validate_united(train_dataset,
                           val_dataset,
                           train_device,
                           val_device,
+                          use_mat,
                           opt_type,
                           n_epoch,
                           batch_size,
@@ -37,7 +38,7 @@ def train_validate_united(train_dataset,
     tensorboard_logger.configure('logs/' + hash_code)
 
     criterion = nn.BCELoss()
-    united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'), use_mat=True).to(train_device)
+    united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'), use_mat=use_mat).to(train_device)
 
     if opt_type == 'sgd':
         opt = optim.SGD(united_net.parameters(),
@@ -122,7 +123,7 @@ def train_validate_united(train_dataset,
             utils.save_model(united_net, "data/trained_models", hash_code)
         else:
             early_stop_count += 1
-            if early_stop_count > 20:
+            if early_stop_count > 30:
                 print('Traning can not improve from epoch {}\tBest loss: {}'.format(e, min_loss))
                 break
 
@@ -157,6 +158,7 @@ def predict(dataset, model_path, device='cpu'):
     probas = np.concatenate(probas)
     return probas
 
+
 def plot_roc_curve(y_true, y_pred, hashcode=''):
 
     if not os.path.exists('vis/'):
@@ -168,6 +170,7 @@ def plot_roc_curve(y_true, y_pred, hashcode=''):
     plt.plot(fpr, tpr)
     plt.savefig('vis/ROC_{}'.format(hashcode + '.png'))
     plt.clf()  # Clear figure
+
 
 def plot_precision_recall(y_true, y_pred, hashcode=''):
 
@@ -196,14 +199,15 @@ def main():
     parser.add_argument('-l', '--lr', help='Learning rate', dest='lr', default=1e-5, type=float)
     parser.add_argument('-k', '--mode', help='Train or predict ?', dest='mode', default='train', type=str)
     parser.add_argument('-m', '--model_path', help='Trained model path', dest='model_path', type=str)
+    parser.add_argument('-um', '--use_mat', help='Use mat feature or not', dest='use_mat', type=int, required=True)
     args = parser.parse_args()
 
     train_data, val_data = train_validation_split(args.dataset)
     train_dataset = EGFRDataset(train_data)
     val_dataset = EGFRDataset(val_data)
-    if args.gpu:
-        train_device = 'cuda'
-        val_device = 'cuda'
+    if torch.cuda.is_available():
+        train_device = 'cuda:7'
+        val_device = 'cuda:7'
     else:
         train_device = 'cpu'
         val_device = 'cpu'
@@ -213,6 +217,7 @@ def main():
                               val_dataset,
                               train_device,
                               val_device,
+                              args.use_mat == 1,
                               args.opt,
                               int(args.epochs),
                               int(args.batchsize),
