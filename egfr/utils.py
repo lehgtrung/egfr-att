@@ -28,8 +28,12 @@ def custom_collate(batch):
     transposed = zip(*batch)
     lst = []
     for samples in transposed:
-        if isinstance(samples[0], str):
-            lst.append(samples)
+        try:
+            if isinstance(samples[0], str) or isinstance(samples[0], unicode):
+                lst.append(samples)
+        except NameError:
+            if isinstance(samples[0], str):
+                lst.append(samples)
         if isinstance(samples[0], int):
             lst.append(torch.LongTensor(samples))
         elif isinstance(samples[0], float):

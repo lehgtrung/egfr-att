@@ -20,7 +20,7 @@ def get_mol_importance(data_path, model_path, dir_path, device):
     loader = dataloader.DataLoader(dataset=dataset,
                                    batch_size=128,
                                    collate_fn=utils.custom_collate,
-                                   shuffle=True)
+                                   shuffle=False)
     united_net = UnitedNet(dense_dim=dataset.get_dim('mord'), use_mat=True, dir_path=dir_path, infer=True).to(device)
     united_net.load_state_dict(torch.load(model_path, map_location=device))
     united_net.eval()
@@ -30,7 +30,6 @@ def get_mol_importance(data_path, model_path, dir_path, device):
             mord_ft = mord_ft.float().to(device)
             non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(device)
             mat_ft = non_mord_ft.squeeze(1).float().to(device)
-            # Forward to get smiles and equivalent weights
             o = united_net(non_mord_ft, mord_ft, mat_ft, smiles=smiles)
     print('Forward done !!!')
 

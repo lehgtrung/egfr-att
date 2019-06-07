@@ -97,7 +97,7 @@ class AttentionNet(nn.Module):
 
 
 class UnitedNet(nn.Module):
-    def __init__(self, dense_dim, use_mord=True, use_mat=True, infer=False, dir_path=None, vis_thresh=0.8):
+    def __init__(self, dense_dim, use_mord=True, use_mat=True, infer=False, dir_path=None, vis_thresh=0.5):
         super(UnitedNet, self).__init__()
         self.use_mord = use_mord
         self.use_mat = use_mat
@@ -149,7 +149,7 @@ class UnitedNet(nn.Module):
         if self.use_mat:
             self.att_fc = nn.Linear(42 + 150, 1)
         else:
-            self.comb_fc_alt = nn.Linear(150, 1)
+            self.comb_fc_alt = nn.Linear(128, 1)
 
     def forward(self, x_non_mord, x_mord, x_mat, smiles=None):
         # FORWARD CNN

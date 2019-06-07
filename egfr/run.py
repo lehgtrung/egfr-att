@@ -19,6 +19,7 @@ def train_validate_united(train_dataset,
                           train_device,
                           val_device,
                           use_mat,
+                          use_mord,
                           opt_type,
                           n_epoch,
                           batch_size,
@@ -38,7 +39,8 @@ def train_validate_united(train_dataset,
     tensorboard_logger.configure('logs/' + hash_code)
 
     criterion = nn.BCELoss()
-    united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'), use_mat=use_mat).to(train_device)
+    united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'),
+                           use_mat=use_mat, use_mord=use_mord).to(train_device)
 
     if opt_type == 'sgd':
         opt = optim.SGD(united_net.parameters(),
@@ -199,7 +201,8 @@ def main():
     parser.add_argument('-l', '--lr', help='Learning rate', dest='lr', default=1e-5, type=float)
     parser.add_argument('-k', '--mode', help='Train or predict ?', dest='mode', default='train', type=str)
     parser.add_argument('-m', '--model_path', help='Trained model path', dest='model_path', type=str)
-    parser.add_argument('-um', '--use_mat', help='Use mat feature or not', dest='use_mat', type=int, required=True)
+    parser.add_argument('-uma', '--use_mat', help='Use mat feature or not', dest='use_mat', type=int, required=True)
+    parser.add_argument('-umo', '--use_mord', help='Use mat feature or not', dest='use_mord', type=int, required=True)
     args = parser.parse_args()
 
     train_data, val_data = train_validation_split(args.dataset)
@@ -218,6 +221,7 @@ def main():
                               train_device,
                               val_device,
                               args.use_mat == 1,
+                              args.use_mord == 1,
                               args.opt,
                               int(args.epochs),
                               int(args.batchsize),
