@@ -1,7 +1,7 @@
 Attention-based Multi-input Neural network
 =============
 
-<img src="https://i.imgur.com/4FBRFh6.jpg" width="500">
+<img src="https://i.imgur.com/4FBRFh6.jpg" width="700">
 
 ## How to install
 This package requires:
