@@ -10,9 +10,10 @@ from metrics import *
 import utils
 import matplotlib.pyplot as plt
 import os
+import pandas as pd
 from sklearn.metrics import precision_recall_curve
 plt.switch_backend('agg')
-import pandas as pd
+
 
 def train_validate_united(train_dataset,
                           val_dataset,
@@ -52,7 +53,6 @@ def train_validate_united(train_dataset,
                          lr=lr)
 
     min_loss = 100  # arbitary large number
-    min_loss_idx = 0
     early_stop_count = 0
     for e in range(n_epoch):
         train_losses = []
@@ -120,8 +120,6 @@ def train_validate_united(train_dataset,
         loss_epoch = sum(val_losses) / len(val_losses)
         if loss_epoch < min_loss:
             early_stop_count = 0
-            min_loss_idx = e
-            print(min_loss_idx)
             min_loss = loss_epoch
             utils.save_model(united_net, "data/trained_models", hash_code + "_" + str(fold))
         else:
@@ -264,7 +262,7 @@ def main():
     cv_metrics_df = pd.DataFrame([train_metrics_df.mean(), val_metrics_df.mean(), best_cv_df.mean()], index = ['train', 'val', 'load'])
     print(cv_metrics_df[['sensitivity', 'specificity', 'accuracy', 'mcc', 'auc']])
 
+
 if __name__ == '__main__':
     main()
-
 

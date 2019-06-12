@@ -51,7 +51,6 @@ def train_validate_united(train_dataset,
                          lr=lr)
 
     min_loss = 100  # arbitary large number
-    min_loss_idx = 0
     early_stop_count = 0
     for e in range(n_epoch):
         train_losses = []
@@ -92,7 +91,6 @@ def train_validate_united(train_dataset,
 
             with torch.no_grad():
                 outputs = united_net(non_mord_ft, mord_ft, mat_ft)
-                # print(outputs[-1, -20:])
 
                 loss = criterion(outputs, label)
                 val_losses.append(float(loss.item()))
@@ -119,8 +117,6 @@ def train_validate_united(train_dataset,
         loss_epoch = sum(val_losses) / len(val_losses)
         if loss_epoch < min_loss:
             early_stop_count = 0
-            min_loss_idx = e
-            print(min_loss_idx)
             min_loss = loss_epoch
             utils.save_model(united_net, "data/trained_models", hash_code)
         else:
