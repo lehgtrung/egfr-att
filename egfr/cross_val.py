@@ -4,7 +4,7 @@ import torch.nn as nn
 import tensorboard_logger
 from nets import UnitedNet
 from torch.utils.data import dataloader
-from dataset import EGFRDataset, train_validation_split, train_cross_validation_split
+from dataset import EGFRDataset, train_cross_validation_split
 import torch.optim as optim
 from metrics import *
 import utils

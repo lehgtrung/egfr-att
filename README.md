@@ -1,7 +1,7 @@
 Attention-based Multi-input Neural network
 =============
 
-<img src="https://imgur.com/4FBRFh6" width="300">
+<img src="https://i.imgur.com/4FBRFh6.jpg" width="300">
 
 ## How to install
 This package requires:
@@ -11,4 +11,4 @@ This package requires:
 ## Example usage
 
 EGFR Dataset:
-
+* Download dataset from: 
