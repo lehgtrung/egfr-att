@@ -10,17 +10,6 @@ This package requires:
 
 ## Usage
 
-Clone the project and get the dataset:
-```bash
-git clone https://github.com/lehgtrung/egfr-att.git
-cd egfr-att/egfr
-mkdir data
-wget --no-check-certificate \
-'https://drive.google.com/uc?export=download&id=17kGQhgzs6qhNJ8wUQM7yJmdenMgw13B2'\
- -O data/data.zip
-unzip data/data.zip
-```
-
 #### To train with Train/Test scheme, use:
 ```bash
 python simple_run.py --mode train
