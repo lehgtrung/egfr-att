@@ -38,7 +38,7 @@ def train_validate_united(train_dataset,
                                        collate_fn=utils.custom_collate,
                                        shuffle=False)
 
-    # tensorboard_logger.configure('logs/' + hash_code)
+    tensorboard_logger.configure('logs/' + hash_code)
 
     criterion = nn.BCELoss()
     united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'),
@@ -93,7 +93,6 @@ def train_validate_united(train_dataset,
 
             with torch.no_grad():
                 outputs = united_net(non_mord_ft, mord_ft, mat_ft)
-                # print(outputs[-1, -20:])
 
                 loss = criterion(outputs, label)
                 val_losses.append(float(loss.item()))
@@ -188,6 +187,7 @@ def plot_precision_recall(y_true, y_pred, hashcode=''):
     plt.savefig('vis/PR_{}'.format(hashcode + '.png'))
     plt.clf()  # Clear figure
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dataset', help='Input dataset', dest='dataset',
@@ -198,10 +198,18 @@ def main():
     parser.add_argument('-g', '--gpu', help='Use GPU or Not?', action='store_true')
     parser.add_argument('-c', '--hashcode', help='Hashcode for tf.events', dest='hashcode', default='TEST')
     parser.add_argument('-l', '--lr', help='Learning rate', dest='lr', default=1e-5, type=float)
-    parser.add_argument('-k', '--mode', help='Train or predict ?', dest='mode', default='train', type=str)
-    parser.add_argument('-m', '--model_path', help='Trained model path', dest='model_path', type=str)
-    parser.add_argument('-uma', '--use_mat', help='Use mat feature or not', dest='use_mat', type=int, required=True)
-    parser.add_argument('-umo', '--use_mord', help='Use mat feature or not', dest='use_mord', type=int, required=True)
+    parser.add_argument('-k', '--mode', help='Train or predict ?', dest='mode', default='train')
+    parser.add_argument('-m', '--model_path', help='Trained model path', dest='model_path')
+    parser.add_argument('-uma', '--use_mat',
+                        default=True,
+                        help='Use mat feature or not',
+                        dest='use_mat',
+                        type=lambda x: (str(x).lower() == 'true'))
+    parser.add_argument('-umo', '--use_mord',
+                        default=True,
+                        help='Use mord feature or not',
+                        dest='use_mord',
+                        type=lambda x: (str(x).lower() == 'true'))
     args = parser.parse_args()
 
     if torch.cuda.is_available():
@@ -227,21 +235,19 @@ def main():
         fold += 1
         train_dataset = EGFRDataset(train_data)
         val_dataset = EGFRDataset(val_data)
-        # print('Train', len(train_dataset))
-        # print('Val', len(val_dataset))
         train_metrics, val_metrics = train_validate_united(train_dataset,
-                                                          val_dataset,
-                                                          train_device,
-                                                          val_device,
-                                                          args.use_mat == 1,
-                                                          args.use_mord == 1,
-                                                          args.opt,
-                                                          int(args.epochs),
-                                                          int(args.batchsize),
-                                                          {'sensitivity': sensitivity, 'specificity': specificity,
-                                                           'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
-                                                          args.hashcode,
-                                                          args.lr,
+                                                           val_dataset,
+                                                           train_device,
+                                                           val_device,
+                                                           args.use_mat,
+                                                           args.use_mord,
+                                                           args.opt,
+                                                           int(args.epochs),
+                                                           int(args.batchsize),
+                                                           {'sensitivity': sensitivity, 'specificity': specificity,
+                                                            'accuracy': accuracy, 'mcc': mcc, 'auc': auc},
+                                                           args.hashcode,
+                                                           args.lr,
                                                            fold)
         train_cv_metrics.append(train_metrics)
         val_cv_metrics.append(val_metrics)
@@ -259,7 +265,10 @@ def main():
     train_metrics_df = pd.DataFrame(train_cv_metrics)
     val_metrics_df = pd.DataFrame(val_cv_metrics)
     best_cv_df = pd.DataFrame(best_cv)
-    cv_metrics_df = pd.DataFrame([train_metrics_df.mean(), val_metrics_df.mean(), best_cv_df.mean()], index = ['train', 'val', 'load'])
+    cv_metrics_df = pd.DataFrame([train_metrics_df.mean(),
+                                  val_metrics_df.mean(),
+                                  best_cv_df.mean()],
+                                 index=['train', 'val', 'load'])
     print(cv_metrics_df[['sensitivity', 'specificity', 'accuracy', 'mcc', 'auc']])
 
 

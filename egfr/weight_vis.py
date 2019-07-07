@@ -63,14 +63,17 @@ def save_weight_vis(smiles_file, weight_file, save_dir):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--dataset', help='Input dataset', dest='dataset', default='data/egfr_10_full_ft_pd_lines.json')
-    parser.add_argument('-m', '--modelpath', help='Input dataset', dest='modelpath', default='data/model')
-    parser.add_argument('-dir', '--dirpath', help='Directory to save attention weights', dest='dirpath', default='data/att_weight')
+    parser.add_argument('-d', '--dataset', help='Input dataset',
+                        dest='dataset', default='data/egfr_10_full_ft_pd_lines.json')
+    parser.add_argument('-m', '--modelpath', help='Input dataset',
+                        dest='modelpath', default='data/model')
+    parser.add_argument('-dir', '--dirpath', help='Directory to save attention weights',
+                        dest='dirpath', default='data/att_weight')
     args = parser.parse_args()
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     get_mol_importance(args.dataset, args.modelpath, args.dirpath, args.device)
-    save_weight_vis(os.path.join(args.dirpath,'smiles.txt'),
+    save_weight_vis(os.path.join(args.dirpath, 'smiles.txt'),
                     os.path.join(args.dirpath, 'weight.txt'),
                     os.path.join(args.dirpath, 'vis/')
                     )

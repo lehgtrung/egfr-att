@@ -10,8 +10,10 @@ from metrics import *
 import utils
 import matplotlib.pyplot as plt
 import os
+import warnings
 from sklearn.metrics import precision_recall_curve
 plt.switch_backend('agg')
+warnings.filterwarnings('ignore')
 
 
 def train_validate_united(train_dataset,
@@ -81,7 +83,7 @@ def train_validate_united(train_dataset,
             opt.step()
 
         # Validate after each epoch
-        print(e, '--', 'VALIDATION ==============>')
+        print('EPOCH', e, '--', 'VALIDATION ==============>')
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
             united_net.eval()
             mord_ft = mord_ft.float().to(val_device)
@@ -195,18 +197,26 @@ def main():
     parser.add_argument('-g', '--gpu', help='Use GPU or Not?', action='store_true')
     parser.add_argument('-c', '--hashcode', help='Hashcode for tf.events', dest='hashcode', default='TEST')
     parser.add_argument('-l', '--lr', help='Learning rate', dest='lr', default=1e-5, type=float)
-    parser.add_argument('-k', '--mode', help='Train or predict ?', dest='mode', default='train', type=str)
-    parser.add_argument('-m', '--model_path', help='Trained model path', dest='model_path', type=str)
-    parser.add_argument('-uma', '--use_mat', help='Use mat feature or not', dest='use_mat', type=int, required=True)
-    parser.add_argument('-umo', '--use_mord', help='Use mat feature or not', dest='use_mord', type=int, required=True)
+    parser.add_argument('-k', '--mode', help='Train or predict ?', dest='mode', default='train')
+    parser.add_argument('-m', '--model_path', help='Trained model path', dest='model_path')
+    parser.add_argument('-uma', '--use_mat',
+                        default=True,
+                        help='Use mat feature or not',
+                        dest='use_mat',
+                        type=lambda x: (str(x).lower() == 'true'))
+    parser.add_argument('-umo', '--use_mord',
+                        default=True,
+                        help='Use mord feature or not',
+                        dest='use_mord',
+                        type=lambda x: (str(x).lower() == 'true'))
     args = parser.parse_args()
 
     train_data, val_data = train_validation_split(args.dataset)
     train_dataset = EGFRDataset(train_data)
     val_dataset = EGFRDataset(val_data)
     if torch.cuda.is_available():
-        train_device = 'cuda:7'
-        val_device = 'cuda:7'
+        train_device = 'cuda'
+        val_device = 'cuda'
     else:
         train_device = 'cpu'
         val_device = 'cpu'
@@ -216,8 +226,8 @@ def main():
                               val_dataset,
                               train_device,
                               val_device,
-                              args.use_mat == 1,
-                              args.use_mord == 1,
+                              args.use_mat,
+                              args.use_mord,
                               args.opt,
                               int(args.epochs),
                               int(args.batchsize),

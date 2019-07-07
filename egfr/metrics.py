@@ -27,16 +27,6 @@ def f1(y_true, y_scores):
     score_obj = get_score_obj(y_true, y_scores)
     return score_obj['weighted avg']['f1-score']
 
-
-def class1_precision(y_true, y_scores):
-    score_obj = get_score_obj(y_true, y_scores)
-    return score_obj['1.0']['precision']
-
-
-def class1_recall(y_true, y_scores):
-    score_obj = get_score_obj(y_true, y_scores)
-    return score_obj['1.0']['recall']
-
 # Metrics for benchmark
 
 

@@ -2,7 +2,6 @@
 import os
 import pickle
 import torch
-import collections
 
 
 def get_max_length(x):
@@ -17,14 +16,6 @@ def pad_sequence(seq):
 
 
 def custom_collate(batch):
-    """
-        Custom collate function for our batch, a batch in dataloader looks like
-            [(0, [24104, 27359], 6684),
-            (0, [24104], 27359),
-            (1, [16742, 31529], 31485),
-            (1, [16742], 31529),
-            (2, [6579, 19316, 13091, 7181, 6579, 19316], 13091)]
-    """
     transposed = zip(*batch)
     lst = []
     for samples in transposed:
@@ -59,17 +50,8 @@ def read_pickle(path):
 
 
 def save_model(model, model_dir_path, hash_code):
-    """
-    :param model: training model
-    :param model_dir_path: directory path
-    :param hash_code: hashcode
-    :param e: epoch
-    """
     if not os.path.exists(model_dir_path):
         os.makedirs(model_dir_path)
     torch.save(model.state_dict(), "{}/model_{}_{}".format(model_dir_path, hash_code, "BEST"))
     print('Save done!')
-
-def load_model():
-    pass
 

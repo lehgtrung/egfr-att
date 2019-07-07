@@ -68,7 +68,8 @@ class EGFRDataset(data.Dataset):
 
         # Standardize mord features
         scl = StandardScaler()
-        self.mord_ft = scl.fit_transform(self.data.drop(columns=self.NON_MORD_NAMES)).tolist()
+        self.mord_ft = scl.fit_transform(
+            self.data.drop(columns=self.NON_MORD_NAMES).astype(np.float64)).tolist()
         self.non_mord_ft = self.data['smile_ft'].values.tolist()
         self.smiles = self.data['smiles'].values.tolist()
         self.label = self.data['active'].values.tolist()
