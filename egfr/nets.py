@@ -19,17 +19,17 @@ class UnitedNet(nn.Module):
 
         # PARAMS FOR CNN NET
         # Convolutionals
-        self.conv_conv1 = nn.Conv2d(1, 6, kernel_size=3)
-        self.conv_pool = nn.MaxPool2d(2, 2)
-        self.conv_conv2 = nn.Conv2d(6, 16, kernel_size=3)
+        self.conv_conv1 = nn.Conv1d(150, 128, kernel_size=2)
+        self.conv_pool = nn.MaxPool1d(2)
+        self.conv_conv2 = nn.Conv1d(128, 128, kernel_size=2)
         self.relu = nn.ReLU()
 
         # Fully connected
-        self.conv_fc = nn.Linear(16 * 9 * 36, 120)
+        self.conv_fc = nn.Linear(1152, 120)
 
         # Batch norms
-        self.conv_batch_norm1 = nn.BatchNorm2d(6)
-        self.conv_batch_norm2 = nn.BatchNorm2d(16)
+        self.conv_batch_norm1 = nn.BatchNorm1d(128)
+        self.conv_batch_norm2 = nn.BatchNorm1d(128)
 
         # PARAMS FOR DENSE NET
         # Fully connected
@@ -56,7 +56,7 @@ class UnitedNet(nn.Module):
         if self.use_mat:
             self.att_fc = nn.Linear(42 + 150, 1)
         else:
-            self.comb_fc_alt = nn.Linear(128, 1)
+            self.comb_fc_alt = nn.Linear(150, 1)
 
     def forward(self, x_non_mord, x_mord, x_mat, smiles=None):
         # FORWARD CNN
