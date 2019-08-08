@@ -50,7 +50,7 @@ class UnitedNet(nn.Module):
         if self.use_mord:
             self.comb_fc = nn.Linear(120 + 64, 150)
         else:
-            self.comb_fc = nn.Linear(120, 128)
+            self.comb_fc = nn.Linear(120, 150)
 
         # PARAMS FOR ATTENTION NET
         if self.use_mat:
