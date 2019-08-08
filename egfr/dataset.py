@@ -42,7 +42,7 @@ def train_cross_validation_split(data_path):
         for fold_dir in fold_dirs:
             train_path = os.path.join(fold_dir, 'train.json')
             val_path = os.path.join(fold_dir, 'val.json')
-            yield read_data(train_path), read_data(val_path)
+            yield pd.read_json(train_path), pd.read_json(val_path)
     else:
         kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
         data = read_data(data_path)
