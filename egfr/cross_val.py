@@ -38,7 +38,7 @@ def train_validate_united(train_dataset,
                                        collate_fn=utils.custom_collate,
                                        shuffle=False)
 
-    tensorboard_logger.configure('logs/' + hash_code)
+    #tensorboard_logger.configure('logs/' + hash_code)
 
     criterion = nn.BCELoss()
     united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'),
@@ -61,11 +61,11 @@ def train_validate_united(train_dataset,
         val_outputs = []
         train_labels = []
         val_labels = []
-        print('FOLD', fold, '-- EPOCH', e, '-- TRAINING')
+        print('FOLD {} -- EPOCH {} -- TRAINING'.format(fold, e+1))
         for i, (mord_ft, non_mord_ft, label) in enumerate(train_loader):
             united_net.train()
             mord_ft = mord_ft.float().to(train_device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(train_device)
+            non_mord_ft = non_mord_ft.view((-1, 150, 42)).float().to(train_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(train_device)
 
@@ -83,11 +83,11 @@ def train_validate_united(train_dataset,
             opt.step()
 
         # Validate after each epoch
-        print('FOLD', fold, 'EPOCH', e, '--', 'VALIDATING')
+        print('FOLD {} -- EPOCH {} -- VALIDATION'.format(fold, e+1))
         for i, (mord_ft, non_mord_ft, label) in enumerate(val_loader):
             united_net.eval()
             mord_ft = mord_ft.float().to(val_device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(val_device)
+            non_mord_ft = non_mord_ft.view((-1, 150, 42)).float().to(val_device)
             mat_ft = non_mord_ft.squeeze(1).float().to(train_device)
             label = label.float().to(val_device)
 
@@ -120,7 +120,7 @@ def train_validate_united(train_dataset,
         if loss_epoch < min_loss:
             early_stop_count = 0
             min_loss = loss_epoch
-            utils.save_model(united_net, "data/trained_models", hash_code + "_" + str(fold))
+            utils.save_model(united_net, "data/trained_models", hash_code + '_' + str(fold))
         else:
             early_stop_count += 1
             if early_stop_count > 30:
@@ -150,7 +150,7 @@ def predict(dataset, model_path, device='cpu', use_mat=True, use_mord=True):
     for i, (mord_ft, non_mord_ft, label) in enumerate(loader):
         with torch.no_grad():
             mord_ft = mord_ft.float().to(device)
-            non_mord_ft = non_mord_ft.view((-1, 1, 150, 42)).float().to(device)
+            non_mord_ft = non_mord_ft.view((-1, 150, 42)).float().to(device)
             mat_ft = non_mord_ft.squeeze(1).float().to(device)
             # Forward to get smiles and equivalent weights
             proba = united_net(non_mord_ft, mord_ft, mat_ft)
