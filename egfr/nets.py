@@ -25,7 +25,7 @@ class UnitedNet(nn.Module):
         self.relu = nn.ReLU()
 
         # Fully connected
-        self.conv_fc = nn.Linear(16 * 9 * 36, 120)
+        self.conv_fc = nn.Linear(16 * 9 * 36, 150)
 
         # Batch norms
         self.conv_batch_norm1 = nn.BatchNorm2d(6)
@@ -46,17 +46,17 @@ class UnitedNet(nn.Module):
             # Dropouts
             self.dense_dropout = nn.Dropout()
 
-        # PARAMS FOR COMBINED NET
-        if self.use_mord:
-            self.comb_fc = nn.Linear(120 + 64, 150)
-        else:
-            self.comb_fc = nn.Linear(120, 128)
-
         # PARAMS FOR ATTENTION NET
         if self.use_mat:
-            self.att_fc = nn.Linear(42 + 150, 1)
+            self.att_fc = nn.Linear(256, 1)
         else:
             self.comb_fc_alt = nn.Linear(128, 1)
+
+        # PARAMS FOR COMBINED NET
+        if self.use_mord:
+            self.comb_fc = nn.Linear(214, 1)
+        else:
+            self.comb_fc = nn.Linear(150, 1)
 
     def forward(self, x_non_mord, x_mord, x_mat, smiles=None):
         # FORWARD CNN
@@ -87,35 +87,33 @@ class UnitedNet(nn.Module):
             x_mord = self.dense_batch_norm3(x_mord)
             x_mord = self.dense_dropout(x_mord)
 
-        # FORWARD COMBINE
-        if self.use_mord:
-            x_comb = torch.cat([x_non_mord, x_mord], dim=1)
-        else:
-            x_comb = x_non_mord
-
-        x_comb = F.relu(self.comb_fc(x_comb))
-
         # FORWARD ATTENTION
         if self.use_mat:
-            x_mat = torch.bmm(x_mat.permute(0, 2, 1), x_comb.unsqueeze(-1)).squeeze(-1)
-            x_mat = torch.cat([x_mat, x_comb], dim=1)
-            probs = torch.sigmoid(self.att_fc(x_mat))
+            x_mat = torch.bmm(x_mat.permute(0, 2, 1), x_non_mord.unsqueeze(-1)).squeeze(-1)
+            x_mat = torch.cat([x_mat, x_non_mord], dim=1)
 
-            if self.infer:
-                if not smiles:
-                    raise ValueError('Please input smiles')
-                alphas = x_comb.cpu().detach().numpy().tolist()
-                alphas = ["\t".join([str(round(elem, 4)) for elem in seq]) for seq in alphas]
-                prob_list = probs.cpu().detach().numpy().tolist()
-                for smile, alpha, prob in zip(smiles, alphas, prob_list):
-                    if prob[0] > self.vis_thresh:
-                        self.weight_f.write(alpha + '\n')
-                        self.smile_out_f.write(smile + '\n')
-
-            return probs
+            if self.use_mord:
+                x_comb = torch.cat([x_mat, x_mord], dim=1)
+                probs = torch.sigmoid(self.att_fc(x_comb))
+                if self.infer:
+                    if not smiles:
+                        raise ValueError('Please input smiles')
+                    alphas = x_comb.cpu().detach().numpy().tolist()
+                    alphas = ["\t".join([str(round(elem, 4)) for elem in seq]) for seq in alphas]
+                    prob_list = probs.cpu().detach().numpy().tolist()
+                    for smile, alpha, prob in zip(smiles, alphas, prob_list):
+                        if prob[0] > self.vis_thresh:
+                            self.weight_f.write(alpha + '\n')
+                            self.smile_out_f.write(smile + '\n')
+                return probs
+            else:
+                return torch.sigmoid(self.comb_fc(x_mat))
         else:
-            probs = torch.sigmoid(self.comb_fc_alt(x_comb))
-            return probs
+            if self.use_mord:
+                x_comb = torch.cat([x_non_mord, x_mord], dim=1)
+            else:
+                x_comb = x_non_mord
+            return torch.sigmoid(self.comb_fc(x_comb))
 
     def __del__(self):
         print('Closing files ...')
