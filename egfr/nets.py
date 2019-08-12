@@ -22,7 +22,6 @@ class UnitedNet(nn.Module):
         self.conv_conv1 = nn.Conv2d(1, 6, kernel_size=3)
         self.conv_pool = nn.MaxPool2d(2, 2)
         self.conv_conv2 = nn.Conv2d(6, 16, kernel_size=3)
-        self.relu = nn.ReLU()
 
         # Fully connected
         self.conv_fc = nn.Linear(16 * 9 * 36, 150)
@@ -62,28 +61,31 @@ class UnitedNet(nn.Module):
         # FORWARD CNN
         x_non_mord = self.conv_conv1(x_non_mord)
         x_non_mord = self.conv_batch_norm1(x_non_mord)
-        x_non_mord = self.relu(x_non_mord)
+        x_non_mord = F.relu(x_non_mord)
         x_non_mord = self.conv_pool(x_non_mord)
 
         x_non_mord = self.conv_conv2(x_non_mord)
         x_non_mord = self.conv_batch_norm2(x_non_mord)
-        x_non_mord = self.relu(x_non_mord)
+        x_non_mord = F.relu(x_non_mord)
         x_non_mord = self.conv_pool(x_non_mord)
 
         x_non_mord = x_non_mord.view(x_non_mord.size(0), -1)
-        x_non_mord = F.sigmoid(self.conv_fc(x_non_mord))
+        if self.use_mat:
+            x_non_mord = F.sigmoid(self.conv_fc(x_non_mord))
+        else:
+            x_non_mord = F.relu(self.conv_fc(x_non_mord))
 
         # FORWARD DENSE
         if self.use_mord:
-            x_mord = self.relu(self.dense_fc1(x_mord))
+            x_mord = F.relu(self.dense_fc1(x_mord))
             x_mord = self.dense_batch_norm1(x_mord)
             x_mord = self.dense_dropout(x_mord)
 
-            x_mord = self.relu(self.dense_fc2(x_mord))
+            x_mord = F.relu(self.dense_fc2(x_mord))
             x_mord = self.dense_batch_norm2(x_mord)
             x_mord = self.dense_dropout(x_mord)
 
-            x_mord = self.relu(self.dense_fc3(x_mord))
+            x_mord = F.relu(self.dense_fc3(x_mord))
             x_mord = self.dense_batch_norm3(x_mord)
             x_mord = self.dense_dropout(x_mord)
 
