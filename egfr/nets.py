@@ -71,7 +71,7 @@ class UnitedNet(nn.Module):
         x_non_mord = self.conv_pool(x_non_mord)
 
         x_non_mord = x_non_mord.view(x_non_mord.size(0), -1)
-        x_non_mord = F.relu(self.conv_fc(x_non_mord))
+        x_non_mord = F.sigmoid(self.conv_fc(x_non_mord))
 
         # FORWARD DENSE
         if self.use_mord:
