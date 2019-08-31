@@ -3,7 +3,7 @@ import pandas as pd
 import torch.utils.data as data
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, KFold
 import numpy as np
 import os, glob
 
@@ -24,10 +24,15 @@ def read_data(data_path):
 
 
 def train_validation_split(data_path):
-    train_path = data_path.split('.')[0] + '_' + 'train.json'
-    val_path = data_path.split('.')[0] + '_' + 'val.json'
+    if os.path.isdir(data_path):
+        train_path = os.path.join(data_path, 'train.json')
+        val_path = os.path.join(data_path, 'val.json')
+    else:
+        train_path = data_path.split('.')[0] + '_' + 'train.json'
+        val_path = data_path.split('.')[0] + '_' + 'val.json'
     if os.path.exists(train_path) and os.path.exists(val_path):
-        return read_data(train_path), read_data(val_path)
+        # return read_data(train_path), read_data(val_path)
+        return pd.read_json(train_path), pd.read_json(val_path)
     data = read_data(data_path)
     train_data, val_data = train_test_split(data, test_size=0.2, random_state=42)
     train_data.to_json(train_path, orient='records', lines=True)
@@ -38,23 +43,23 @@ def train_validation_split(data_path):
 def train_cross_validation_split(data_path):
     dir_path = os.path.dirname(os.path.abspath(data_path))
     fold_dirs = glob.glob(os.path.join(dir_path, 'folds_*'))
-    if len(fold_dirs) > 0:
+    if len(fold_dirs) == 5:
         for fold_dir in fold_dirs:
             train_path = os.path.join(fold_dir, 'train.json')
             val_path = os.path.join(fold_dir, 'val.json')
-            yield read_data(train_path), read_data(val_path)
+            yield pd.read_json(train_path), pd.read_json(val_path)
     else:
-        kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+        kfold = KFold(n_splits=5, shuffle=True, random_state=42)
         data = read_data(data_path)
-        for i, (train_ids, val_id) in enumerate(kfold.split(X=np.empty((len(data['active']), 1)),
-                                                            y=data['active'])):
-            train_data = data.iloc[train_ids, ]
-            val_data = data.iloc[val_id, ]
-            os.makedirs(os.path.join(dir_path, 'folds_{}'.format(i)), exist_ok=True)
-            train_data.to_json(os.path.join(os.path.join(dir_path, 'folds_{}'.format(i)), 'train.json'))
-            val_data.to_json(os.path.join(os.path.join(dir_path, 'folds_{}'.format(i)), 'val.json'))
+        for i, (train_ids, val_ids) in enumerate(kfold.split(X=data.drop('active', axis=1).values,
+                                                             y=data['active'].values)):
+            train_data = data.iloc[train_ids, :]
+            val_data = data.iloc[val_ids, :]
+            # os.makedirs(os.path.join(dir_path, 'folds_{}'.format(i)), exist_ok=True)
+            # train_data.to_json(os.path.join(os.path.join(dir_path, 'folds_{}'.format(i)), 'train.json'))
+            # val_data.to_json(os.path.join(os.path.join(dir_path, 'folds_{}'.format(i)), 'val.json'))
 
-            yield data.iloc[train_ids, ], data.iloc[val_id, ]
+            yield train_data, val_data
 
 
 class EGFRDataset(data.Dataset):

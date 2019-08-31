@@ -11,8 +11,10 @@ import utils
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+import warnings
 from sklearn.metrics import precision_recall_curve
 plt.switch_backend('agg')
+warnings.filterwarnings('ignore')
 
 
 def train_validate_united(train_dataset,
@@ -37,8 +39,6 @@ def train_validate_united(train_dataset,
                                        batch_size=batch_size,
                                        collate_fn=utils.custom_collate,
                                        shuffle=False)
-
-    tensorboard_logger.configure('logs/' + hash_code)
 
     criterion = nn.BCELoss()
     united_net = UnitedNet(dense_dim=train_dataset.get_dim('mord'),
@@ -274,4 +274,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
