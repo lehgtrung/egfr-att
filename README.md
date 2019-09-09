@@ -2,7 +2,7 @@ Attention-based Multi-input Neural network
 =============
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/attention-based-multi-input-deep-learning/drug-discovery-on-egfr-inh)](https://paperswithcode.com/sota/drug-discovery-on-egfr-inh?p=attention-based-multi-input-deep-learning)
 
-<img src="https://i.imgur.com/4FBRFh6.jpg" width="700">
+<img src="https://i.ibb.co/jg5kzd5/egfr-architecture-new.jpg" width="700">
 
 ## How to install
 This package requires:
