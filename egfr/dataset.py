@@ -32,7 +32,7 @@ def train_validation_split(data_path):
         val_path = data_path.split('.')[0] + '_' + 'val.json'
     if os.path.exists(train_path) and os.path.exists(val_path):
         # return read_data(train_path), read_data(val_path)
-        return pd.read_json(train_path), pd.read_json(val_path)
+        return pd.read_json(train_path, lines=True), pd.read_json(val_path, lines=True)
     data = read_data(data_path)
     train_data, val_data = train_test_split(data, test_size=0.2, random_state=42)
     train_data.to_json(train_path, orient='records', lines=True)

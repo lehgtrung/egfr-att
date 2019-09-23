@@ -15,6 +15,9 @@ import ast
 
 
 def get_mol_importance(data_path, model_path, dir_path, device):
+    if not os.path.isdir(dir_path):
+        os.mkdir(dir_path)
+
     data = pd.read_json(data_path, lines=True)
     dataset = EGFRDataset(data, infer=True)
     loader = dataloader.DataLoader(dataset=dataset,
@@ -41,8 +44,8 @@ def weight_vis(smiles, weights, cm='jet', lines=10):
     smi = Chem.MolToSmiles(m)
     aod = ast.literal_eval(m.GetProp('_smilesAtomOutputOrder'))
     flg = atom_flag(smi,150)
-    exwt = [weights[i] for i in range(len(weights)) if flg[i]]
-    fig = SimilarityMaps.GetSimilarityMapFromWeights(m, exwt, colorMap=cm, contourLines=lines)
+    extracted_wt = [weights[i] for i in range(len(flg)) if flg[i]]
+    fig = SimilarityMaps.GetSimilarityMapFromWeights(m, extracted_wt, colorMap=cm, contourLines=lines)
     return fig
 
 
