@@ -51,3 +51,19 @@ python weight_vis.py --dataset data/egfr_10_full_ft_pd_lines.json --modelpath da
 By default, all data will be used to to extract attention weights. However, 
 only samples with prediction output over a threshold (0.2) are chosen.
 
+## Citation
+Please cite our study:
+```
+Pham, H.N., & Le, T. (2019). Attention-based Multi-Input Deep Learning Architecture for Biological Activity Prediction: An Application in EGFR Inhibitors. ArXiv, abs/1906.05168.
+```
+
+Bibtex:
+```
+@article{phamle2019,
+  title={Attention-based Multi-Input Deep Learning Architecture for Biological Activity Prediction: An Application in EGFR Inhibitors},
+  author={Huy Ngoc Pham and Trung Le},
+  journal={ArXiv},
+  year={2019},
+  volume={abs/1906.05168}
+}
+```
