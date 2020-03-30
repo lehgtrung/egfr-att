@@ -59,11 +59,11 @@ Pham, H.N., & Le, T.H. (2019). Attention-based Multi-Input Deep Learning Archite
 
 Bibtex:
 ```
-@article{phamle2019,
+@article{Pham2019AttentionbasedMD,
   title={Attention-based Multi-Input Deep Learning Architecture for Biological Activity Prediction: An Application in EGFR Inhibitors},
   author={Huy Ngoc Pham and Trung Hoang Le},
-  journal={ArXiv},
+  journal={2019 11th International Conference on Knowledge and Systems Engineering (KSE)},
   year={2019},
-  volume={abs/1906.05168}
+  pages={1-9}
 }
 ```
